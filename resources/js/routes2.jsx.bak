@@ -1,0 +1,237 @@
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Layout } from 'antd'
+
+//Hooks
+import { useAuth } from "./hooks/useAuth";
+import usePageTitle from "./hooks/usePageTitle";
+
+// Layouts
+import MainLayout from "./components/Layouts/MainLayout";
+import AuthLayout from "./components/Layouts/AuthLayout";
+import SurveyLayout from "./components/Layouts/SurveyLayout";
+import GuestLayout from "./components/Layouts/GuestLayout";
+// import ReportLayout from "./components/Layouts/ReportLayout";
+// import StrategicReport from './pages/report/Strategic';
+
+// Pages
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const Register = lazy(() => import('./pages/Register'));
+const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Landing = lazy(() => import('./pages/Landing'));
+const Profile = lazy(() => import('./pages/Profile'));
+const GVHForm = lazy(() => import('./pages/gvh/GVHForm'));
+const ProjectList = lazy(() => import('./pages/gvh/ProjectList'));
+const ProjectLanding = lazy(() => import('./pages/gvh/ProjectLanding'));
+const Strategics = lazy(() => import('./pages/projects/Strategics'));
+const StrategicUser = lazy(() => import('./pages/StrategicUser'));
+const QuarterReport = lazy(() => import('./pages/projects/QuarterReport'));
+const QuarterReportAI = lazy(() => import('./pages/projects/QuarterReportAI'));
+const SearchProject = lazy(() => import('./pages/projects/SearchProject'));
+
+// Components
+const SidebarLayout = lazy(() => import('./components/Layouts/SidebarLayout'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProjectDetail = lazy(() => import('./pages/projects/ProjectDetail'));
+//const ReportList = lazy(() => import('./pages/reports/ReportList'));
+
+const PrivateRoute = ({ children }) => {
+  const { isAuthenticated } = useAuth(); // เช็คว่า Login หรือยัง
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+const { Content, Footer } = Layout
+
+
+export default function AppRoutes() {
+  usePageTitle();
+  return (
+    <>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="/dashboard" element={<SidebarLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="projects" element={<Strategics />} />
+          </Route>
+
+          <Route path="/login" element={
+            <AuthLayout>
+              <LoginPage />
+            </AuthLayout>
+          } />
+
+          <Route path="/register" element={
+            <AuthLayout>
+              <Register />
+            </AuthLayout>
+          } />
+
+          <Route path="/" element={
+            <PrivateRoute>
+              <MainLayout>
+                <Home />
+              </MainLayout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/landing" element={<Landing />} />
+          <Route path="/profile" element={<Profile />} />
+
+          <Route path="/strategic-users" element={<StrategicUser />} />
+
+          <Route path="/search" element={
+            <SurveyLayout>
+              <SearchProject />
+            </SurveyLayout>
+          } />
+
+          <Route path="/gvh" element={
+            <SurveyLayout>
+              <ProjectList />
+            </SurveyLayout>
+          } />
+
+          <Route path="gvh/:year/:uuid" element={
+            <SurveyLayout>
+              <ProjectLanding />
+            </SurveyLayout>
+          } />
+
+          <Route path="gvh/:uuid/:phrase" element={
+            <SurveyLayout>
+              <GVHForm />
+            </SurveyLayout>
+          } />
+
+
+          {/*
+          <Route path="strategics">
+            <Route index element={
+              <SurveyLayout>
+                <Strategics />
+              </SurveyLayout>
+            } />
+            <Route element={<ReportLayout />}>
+              <Route path="report" element={<StrategicReport />} />
+            </Route>
+
+          </Route>
+          */}
+
+          <Route path="/quarterreport" element={
+            <SurveyLayout>
+              <QuarterReport />
+            </SurveyLayout>
+          } />
+
+          <Route path="/quarterreport-ai" element={
+            <SurveyLayout>
+              <QuarterReportAI />
+            </SurveyLayout>
+          } />
+
+        </Routes>
+      </Suspense>
+
+      {/*<Layout style={{ minHeight: '100vh' }}>
+      <Sidebar />
+      <Layout>
+        <AppHeader />
+        <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
+          <Routes>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/projects" element={<Strategics />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+
+          </Routes >
+        </Content >
+    <Footer style={{ textAlign: 'center' }}>
+      ระบบรายงานโครงการยุทธศาสตร์ ©2024 Created by Strategic Planning Department
+    </Footer>
+      </Layout >*/}
+      {/*<>
+      <main className="mx-auto max-w-full">
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/login" element={
+              <AuthLayout>
+                <LoginPage />
+              </AuthLayout>
+            } />
+
+            <Route path="/register" element={
+              <AuthLayout>
+                <Register />
+              </AuthLayout>
+            } />
+
+
+            <Route path="/" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <Home />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/landing" element={<Landing />} />
+            <Route path="/profile" element={<Profile />} />
+
+            <Route path="/strategic-users" element={<StrategicUser />} />
+
+            <Route path="/search" element={
+              <SurveyLayout>
+                <SearchProject />
+              </SurveyLayout>
+            } />
+
+            <Route path="/gvh" element={
+              <SurveyLayout>
+                <ProjectList />
+              </SurveyLayout>
+            } />
+
+            <Route path="gvh/:uuid/:phrase" element={
+              <SurveyLayout>
+                <GVHForm />
+              </SurveyLayout>
+            } />
+
+            <Route path="strategics">
+              <Route index element={
+                <SurveyLayout>
+                  <Strategics />
+                </SurveyLayout>
+              } />
+              <Route element={<ReportLayout />}>
+                <Route path="report" element={<StrategicReport />} />
+              </Route>
+
+            </Route>
+
+            <Route path="/quarterreport" element={
+              <SurveyLayout>
+                <QuarterReport />
+              </SurveyLayout>
+            } />
+
+            <Route path="/quarterreport-ai" element={
+              <SurveyLayout>
+                <QuarterReportAI />
+              </SurveyLayout>
+            } />
+
+          </Routes>
+        </Suspense>
+      </main>
+    </>*/}
+
+    </>
+  );
+}

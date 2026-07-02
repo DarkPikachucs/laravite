@@ -1,0 +1,10 @@
+[
+  {
+    "type": "sqlite",
+    "path": "c:\\laragon\\www\\laravite\\database\\plan14.sqlite"
+  },
+  {
+    "type": "sqlite",
+    "path": "c:\\laragon\\www\\laravite\\Modules\\Phy70\\database\\phy70.sqlite"
+  }
+]

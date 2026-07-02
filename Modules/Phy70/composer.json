@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/phy70",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Phy70\\": "app/",
+            "Modules\\Phy70\\Database\\Factories\\": "database/factories/",
+            "Modules\\Phy70\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Phy70\\Tests\\": "tests/"
+        }
+    }
+}

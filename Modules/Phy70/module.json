@@ -1,0 +1,11 @@
+{
+    "name": "Phy70",
+    "alias": "phy70",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Phy70\\Providers\\Phy70ServiceProvider"
+    ],
+    "files": []
+}
