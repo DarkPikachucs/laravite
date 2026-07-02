@@ -221,6 +221,12 @@
                     <input type="email" id="email" name="email" class="form-control" placeholder="example@email.com" value="{{ old('email', session('google_email')) }}" required>
                 </div>
 
+                <!-- Phone Number -->
+                <div class="form-group">
+                    <label class="form-label" for="phone_number">หมายเลขโทรศัพท์ติดต่อ <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="ระบุเบอร์โทรศัพท์มือถือ" value="{{ old('phone_number') }}" required>
+                </div>
+
                 <!-- Password -->
                 <div class="form-group">
                     <label class="form-label" for="password">กำหนดรหัสผ่าน (ขั้นต่ำ 6 ตัวอักษร)</label>

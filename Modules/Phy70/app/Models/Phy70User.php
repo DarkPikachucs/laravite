@@ -21,6 +21,7 @@ class Phy70User extends Authenticatable
         'google_id',
         'avatar',
         'role',
+        'phone_number',
     ];
 
     protected $hidden = [

@@ -194,6 +194,12 @@
                     <input type="text" id="name" name="name" class="form-control" placeholder="ชื่อ นามสกุล" value="{{ old('name') }}" required>
                 </div>
 
+                <!-- Phone Number -->
+                <div class="form-group">
+                    <label class="form-label" for="phone_number">หมายเลขโทรศัพท์ติดต่อ <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="ระบุเบอร์โทรศัพท์มือถือ" value="{{ old('phone_number') }}" required>
+                </div>
+
                 <!-- Password -->
                 <div class="form-group">
                     <label class="form-label" for="password">กำหนดรหัสผ่าน (ขั้นต่ำ 6 ตัวอักษร)</label>

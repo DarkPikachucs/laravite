@@ -67,9 +67,11 @@ class Phy70AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:sqlite_phy70.phy70_users,email',
             'password' => 'required|string|min:6|confirmed',
+            'phone_number' => 'required|string|max:50',
         ], [
             'email.unique' => 'อีเมลนี้ถูกใช้งานในระบบแล้ว',
             'password.confirmed' => 'รหัสผ่านยืนยันไม่ตรงกัน',
+            'phone_number.required' => 'กรุณากรอกหมายเลขโทรศัพท์ติดต่อ',
         ]);
 
         // Create organization
@@ -84,6 +86,7 @@ class Phy70AuthController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'admin',
+            'phone_number' => $request->phone_number,
         ]);
 
         $this->guard()->login($user);
@@ -164,6 +167,9 @@ class Phy70AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'password' => 'required|string|min:6|confirmed',
+            'phone_number' => 'required|string|max:50',
+        ], [
+            'phone_number.required' => 'กรุณากรอกหมายเลขโทรศัพท์ติดต่อ',
         ]);
 
         // Create User
@@ -173,6 +179,7 @@ class Phy70AuthController extends Controller
             'email' => $invitation->email,
             'password' => Hash::make($request->password),
             'role' => 'user', // Invited user defaults to normal user
+            'phone_number' => $request->phone_number,
         ]);
 
         // Mark invitation as used

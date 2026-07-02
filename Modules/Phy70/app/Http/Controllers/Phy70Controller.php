@@ -26,7 +26,15 @@ class Phy70Controller extends Controller
                 ->get();
         }
 
-        return view('phy70::index', compact('user', 'proposals'));
+        // Get all registered organizations with their coordinators (admins)
+        $organizations = \Modules\Phy70\Models\Phy70Organization::with(['users'])->get()->map(function($org) {
+            $admin = $org->users->where('role', 'admin')->first();
+            $org->coordinator_name = $admin ? $admin->name : 'ไม่ระบุ';
+            $org->coordinator_phone = $admin ? $admin->phone_number : 'ไม่ระบุ';
+            return $org;
+        });
+
+        return view('phy70::index', compact('user', 'proposals', 'organizations'));
     }
 
     public function createProposal()

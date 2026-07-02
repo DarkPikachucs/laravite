@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('google_id')->nullable();
             $table->string('avatar')->nullable();
             $table->string('role')->default('user'); // admin or user
+            $table->string('phone_number')->nullable();
             $table->rememberToken();
             $table->timestamps();
 

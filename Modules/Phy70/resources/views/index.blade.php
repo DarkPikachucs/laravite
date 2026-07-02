@@ -592,6 +592,33 @@
 
             <!-- Right: Info Panel -->
             <div style="display: flex; flex-direction: column; gap: 24px;">
+                <!-- Registered Organizations Card -->
+                <div class="glass-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);">
+                    <h3 class="section-title" style="margin-bottom: 16px; color: var(--primary);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        หน่วยงานที่ลงทะเบียนแล้ว
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; padding-right: 4px;">
+                        @if($organizations->isEmpty())
+                            <div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px 0;">
+                                ยังไม่มีหน่วยงานลงทะเบียน
+                            </div>
+                        @else
+                            @foreach($organizations as $org)
+                                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                    <div style="font-size: 14px; font-weight: 600; color: #fff;">{{ $org->name }}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px;">
+                                        <span>ผู้ประสานงาน: <strong style="color: var(--secondary);">{{ $org->coordinator_name }}</strong></span>
+                                        <span>เบอร์โทรติดต่อ: <strong style="color: var(--secondary);">{{ $org->coordinator_phone }}</strong></span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endif
+                    </div>
+                </div>
+
                 <!-- Info Strategic Summary -->
                 <div class="glass-card" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%);">
                     <h3 class="section-title" style="margin-bottom: 16px; color: var(--secondary);">
