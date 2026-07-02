@@ -206,7 +206,12 @@
                 <!-- Organization Name -->
                 <div class="form-group">
                     <label class="form-label" for="organization_name">ชื่อหน่วยงาน / องค์กร</label>
-                    <input type="text" id="organization_name" name="organization_name" class="form-control" placeholder="ระบุชื่อหน่วยงานของท่าน" value="{{ old('organization_name') }}" required>
+                    <input type="text" id="organization_name" name="organization_name" list="organizations_list" class="form-control" placeholder="ระบุชื่อหน่วยงานของท่าน" value="{{ old('organization_name') }}" required autocomplete="off">
+                    <datalist id="organizations_list">
+                        @foreach($organizations as $org)
+                            <option value="{{ $org->name }}"></option>
+                        @endforeach
+                    </datalist>
                 </div>
 
                 <!-- Admin Name -->

@@ -42,27 +42,13 @@ Route::get('/clear-cache', function() {
     Artisan::call('view:cache');
     Artisan::call('optimize');
 
-    // Check if SQLite extension is loaded
-    if (extension_loaded('pdo_sqlite')) {
-        echo 'PDO_SQLITE is enabled.';
-    } else {
-        echo 'PDO_SQLITE is NOT enabled.';
-    }
-
-    if (extension_loaded('sqlite3')) {
-        echo 'SQLite3 is enabled.';
-    } else {
-        echo 'SQLite3 is NOT enabled.';
-    }
-
-    try {
-    $db = new PDO('sqlite::memory:');
-    echo "Connection successful!";
-} catch (PDOException $e) {
-    echo "Connection failed: " . $e->getMessage();
-}
-
     dd("clear");
+});
+
+//sync storage
+Route::get('/storage-link', function() {
+    Artisan::call('storage:link');
+    dd("storage link created");
 });
 
 // Survey Form Routes with Meta Tags

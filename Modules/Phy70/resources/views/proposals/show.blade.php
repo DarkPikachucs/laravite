@@ -142,7 +142,7 @@
 
     <div class="show-container">
         <header class="header">
-            <h2 class="title">รายละเอียดข้อเสนอโครงการ</h2>
+            <h2 class="title">รายละเอียดข้อเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2570</h2>
             <a href="/app/phy70" class="btn-secondary">← กลับสู่แดชบอร์ด</a>
         </header>
 
@@ -159,32 +159,7 @@
             </div>
         </div>
 
-        <!-- SECTION 1 -->
-        <div class="glass-card">
-            <div class="section-header">
-                <h3 class="section-title">ส่วนที่ 1: ความสอดคล้องยุทธศาสตร์ระดับชาติ</h3>
-            </div>
 
-            <div class="info-item">
-                <div class="info-label">ยุทธศาสตร์ชาติ</div>
-                <div class="info-val">{{ $proposal->national_strategy ?: 'ไม่ระบุข้อมูล' }}</div>
-            </div>
-
-            <div class="info-item">
-                <div class="info-label">แผนแม่บทภายใต้ยุทธศาสตร์ชาติ</div>
-                <div class="info-val">{{ $proposal->master_plan ?: 'ไม่ระบุข้อมูล' }}</div>
-            </div>
-
-            <div class="info-item">
-                <div class="info-label">แผนพัฒนาเศรษฐกิจและสังคมแห่งชาติ</div>
-                <div class="info-val">{{ $proposal->national_plan ?: 'ไม่ระบุข้อมูล' }}</div>
-            </div>
-
-            <div class="info-item">
-                <div class="info-label">เป้าหมายและแนวทางการพัฒนาภาค</div>
-                <div class="info-val">{{ $proposal->regional_development ?: 'ไม่ระบุข้อมูล' }}</div>
-            </div>
-        </div>
 
         <!-- SECTION 2 -->
         <div class="glass-card">
@@ -220,6 +195,19 @@
             </div>
 
             <div class="info-item">
+                <div class="info-label">พื้นที่เป้าหมายการดำเนินโครงการ</div>
+                <div class="info-val">
+                    จังหวัด{{ $proposal->target_province }}
+                    @if($proposal->target_district)
+                        ➔ อำเภอ{{ $proposal->target_district }}
+                    @endif
+                    @if($proposal->target_subdistrict)
+                        ➔ ตำบล{{ $proposal->target_subdistrict }}
+                    @endif
+                </div>
+            </div>
+
+            <div class="info-item">
                 <div class="info-label">กิจกรรมหลัก</div>
                 <div class="info-val">{{ $proposal->main_activity }}</div>
             </div>
@@ -248,10 +236,7 @@
                 </div>
             </div>
 
-            <div class="info-item">
-                <div class="info-label">สถานที่ติดต่อประสานงาน</div>
-                <div class="info-val">{{ $proposal->contact_address }}</div>
-            </div>
+
 
             @if($proposal->attachments && count($proposal->attachments) > 0)
                 <div class="info-item" style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px;">
@@ -269,5 +254,61 @@
                 </div>
             @endif
         </div>
+
+        <!-- SECTION 4 -->
+        @if($proposal->activities && count($proposal->activities) > 0)
+        <div class="glass-card">
+            <div class="section-header">
+                <h3 class="section-title">ส่วนที่ 4: กิจกรรมย่อยภายใต้โครงการ</h3>
+            </div>
+
+            @foreach($proposal->activities as $index => $act)
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 24px; margin-bottom: 20px;">
+                    <h4 style="font-size: 16px; font-weight: 600; color: var(--secondary); margin-bottom: 16px; font-family: 'Prompt', sans-serif;">
+                        🎯 กิจกรรมที่ {{ $index + 1 }}: {{ $act['name'] }}
+                    </h4>
+                    
+                    <div class="info-grid">
+                        <div class="info-item" style="margin-bottom: 12px;">
+                            <div class="info-label" style="font-size: 11.5px;">งบประมาณ (บาท)</div>
+                            <div class="info-val" style="padding: 8px 12px; font-size: 14px; font-family: 'JetBrains Mono', monospace; font-weight: 500;">
+                                {{ number_format($act['budget'], 2) }}
+                            </div>
+                        </div>
+
+                        <div class="info-item" style="margin-bottom: 12px;">
+                            <div class="info-label" style="font-size: 11.5px;">ผู้รับผิดชอบ</div>
+                            <div class="info-val" style="padding: 8px 12px; font-size: 14px;">
+                                {{ $act['responsible_person'] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-item" style="margin-bottom: 12px;">
+                            <div class="info-label" style="font-size: 11.5px;">หน่วยงานรับผิดชอบ</div>
+                            <div class="info-val" style="padding: 8px 12px; font-size: 14px;">
+                                {{ $act['operating_agency'] }}
+                            </div>
+                        </div>
+
+                        <div class="info-item" style="margin-bottom: 12px;">
+                            <div class="info-label" style="font-size: 11.5px;">หน่วยงานที่เกี่ยวข้อง</div>
+                            <div class="info-val" style="padding: 8px 12px; font-size: 14px;">
+                                {{ $act['involved_agencies'] }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-item" style="margin-bottom: 0;">
+                        <div class="info-label" style="font-size: 11.5px;">แนวทางการพัฒนาจังหวัดที่เกี่ยวข้อง</div>
+                        <div class="info-val" style="padding: 8px 12px; font-size: 14px; color: var(--secondary);">
+                            {{ $act['guideline'] }}
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @endif
     </div>
 </x-phy70::layouts.master>

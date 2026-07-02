@@ -455,7 +455,7 @@
                 </div>
                 <div>
                     <h1 class="logo-title">PHY70 Portal</h1>
-                    <span class="logo-subtitle">Health & Performance Platform</span>
+                    <span class="logo-subtitle">ระบบเสนอโครงการจังหวัดเพชรบูรณ์ ปี 2570</span>
                 </div>
             </div>
             
@@ -508,9 +508,9 @@
         <!-- Welcome Banner -->
         <div class="glass-card welcome-banner">
             <div class="welcome-text">
-                <h2 class="welcome-title">ระบบจัดทำและเสนอโครงการสุขภาวะทางกาย (PHY70)</h2>
+                <h2 class="welcome-title">ระบบจัดทำและเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2570 (PHY70)</h2>
                 <p class="welcome-desc">
-                    ยินดีต้อนรับสู่ระบบส่งข้อเสนอโครงการขับเคลื่อนเชิงยุทธศาสตร์ระดับหน่วยงาน เพื่อส่งเสริมการเคลื่อนไหวทางกายและนวัตกรรมสร้างเสริมสุขภาพระดับประเทศ
+                    ยินดีต้อนรับสู่ระบบส่งข้อเสนอโครงการขับเคลื่อนเชิงยุทธศาสตร์สุขภาวะทางกายระดับหน่วยงาน จังหวัดเพชรบูรณ์ ประจำปีงบประมาณ พ.ศ. 2570 เพื่อส่งเสริมการเคลื่อนไหวทางกายและสุขภาวะชุมชนอย่างยั่งยืน
                 </p>
             </div>
             <div class="welcome-actions">

@@ -35,7 +35,9 @@ class Phy70AuthController extends Controller
         ]);
 
         if ($this->guard()->attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+            $isLoggedIn = $request->session()->regenerate();
+            //dd($this->guard()->user(), $request->session()->all(), $isLoggedIn);
+
             return redirect('/app/phy70')->with('success', 'เข้าสู่ระบบสำเร็จ');
         }
 
@@ -57,7 +59,8 @@ class Phy70AuthController extends Controller
         if ($this->guard()->check()) {
             return redirect('/app/phy70');
         }
-        return view('phy70::auth.register');
+        $organizations = Phy70Organization::orderBy('name', 'asc')->get();
+        return view('phy70::auth.register', compact('organizations'));
     }
 
     public function register(Request $request)
@@ -74,10 +77,13 @@ class Phy70AuthController extends Controller
             'phone_number.required' => 'กรุณากรอกหมายเลขโทรศัพท์ติดต่อ',
         ]);
 
-        // Create organization
-        $organization = Phy70Organization::create([
-            'name' => $request->organization_name,
-        ]);
+        // Find or create organization
+        $organization = Phy70Organization::where('name', $request->organization_name)->first();
+        if (!$organization) {
+            $organization = Phy70Organization::create([
+                'name' => $request->organization_name,
+            ]);
+        }
 
         // Create first user as admin
         $user = Phy70User::create([

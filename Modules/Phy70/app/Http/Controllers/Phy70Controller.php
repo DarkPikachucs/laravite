@@ -54,33 +54,49 @@ class Phy70Controller extends Controller
         }
 
         $request->validate([
-            // Section 1
-            'national_strategy' => 'nullable|string',
-            'master_plan' => 'nullable|string',
-            'national_plan' => 'nullable|string',
-            'regional_development' => 'nullable|string',
             // Section 2
-            'province_issue' => 'nullable|string',
-            'development_guideline' => 'nullable|string',
-            'main_plan' => 'nullable|string',
-            'plan' => 'nullable|string',
+            'province_issue' => 'required|string',
+            'development_guideline' => 'required|string',
+            'main_plan' => 'required|string',
+            'plan' => 'required|string',
             // Section 3
+            'target_province' => 'required|string|max:255',
+            'target_district' => 'nullable|string|max:255',
+            'target_subdistrict' => 'nullable|string|max:255',
             'project_name' => 'required|string|max:255',
             'main_activity' => 'required|string',
             'operating_agency' => 'required|string|max:255',
             'responsible_person' => 'required|string|max:255',
             'position' => 'required|string|max:255',
-            'contact_address' => 'required|string',
             'phone_number' => 'required|string|max:50',
             'attachments.*' => 'nullable|file|max:10240', // Max 10MB per file
+            'activities' => 'nullable|array',
+            'activities.*.name' => 'required|string|max:255',
+            'activities.*.budget' => 'required|numeric|min:0',
+            'activities.*.responsible_person' => 'required|string|max:255',
+            'activities.*.operating_agency' => 'required|string|max:255',
+            'activities.*.involved_agencies' => 'required|string|max:255',
+            'activities.*.guideline' => 'required|string|max:255',
         ], [
+            'province_issue.required' => 'กรุณาเลือกประเด็นการพัฒนาของจังหวัด',
+            'development_guideline.required' => 'กรุณาเลือกแนวทางการพัฒนาของจังหวัด',
+            'main_plan.required' => 'กรุณาเลือกแผนงานหลักของจังหวัด',
+            'plan.required' => 'กรุณาเลือกแผนงานของจังหวัด',
+            'target_province.required' => 'กรุณาเลือกจังหวัดพื้นที่เป้าหมาย',
             'project_name.required' => 'กรุณากรอกชื่อโครงการ',
             'main_activity.required' => 'กรุณากรอกกิจกรรมหลัก',
             'operating_agency.required' => 'กรุณากรอกหน่วยดำเนินการ',
             'responsible_person.required' => 'กรุณากรอกผู้รับผิดชอบ',
             'position.required' => 'กรุณากรอกตำแหน่ง',
-            'contact_address.required' => 'กรุณากรอกสถานที่ติดต่อ',
             'phone_number.required' => 'กรุณากรอกหมายเลขโทรศัพท์',
+            'activities.*.name.required' => 'กรุณากรอกชื่อกิจกรรมในส่วนที่ 4',
+            'activities.*.budget.required' => 'กรุณากรอกงบประมาณของกิจกรรมในส่วนที่ 4',
+            'activities.*.budget.numeric' => 'งบประมาณในส่วนที่ 4 ต้องเป็นตัวเลขเท่านั้น',
+            'activities.*.budget.min' => 'งบประมาณในส่วนที่ 4 ต้องมากกว่าหรือเท่ากับ 0',
+            'activities.*.responsible_person.required' => 'กรุณากรอกผู้รับผิดชอบกิจกรรมในส่วนที่ 4',
+            'activities.*.operating_agency.required' => 'กรุณากรอกหน่วยงานรับผิดชอบในส่วนที่ 4',
+            'activities.*.involved_agencies.required' => 'กรุณากรอกหน่วยงานที่เกี่ยวข้องในส่วนที่ 4',
+            'activities.*.guideline.required' => 'กรุณาเลือกแนวทางการพัฒนาจังหวัดในส่วนที่ 4',
         ]);
 
         $attachments = [];
@@ -99,22 +115,21 @@ class Phy70Controller extends Controller
         Phy70Proposal::create([
             'organization_id' => $user->organization_id,
             'user_id' => $user->id,
-            'national_strategy' => $request->national_strategy,
-            'master_plan' => $request->master_plan,
-            'national_plan' => $request->national_plan,
-            'regional_development' => $request->regional_development,
             'province_issue' => $request->province_issue,
             'development_guideline' => $request->development_guideline,
             'main_plan' => $request->main_plan,
             'plan' => $request->plan,
+            'target_province' => $request->target_province,
+            'target_district' => $request->target_district,
+            'target_subdistrict' => $request->target_subdistrict,
             'project_name' => $request->project_name,
             'main_activity' => $request->main_activity,
             'operating_agency' => $request->operating_agency,
             'responsible_person' => $request->responsible_person,
             'position' => $request->position,
-            'contact_address' => $request->contact_address,
             'phone_number' => $request->phone_number,
             'attachments' => $attachments,
+            'activities' => $request->activities,
         ]);
 
         return redirect('/app/phy70')->with('success', 'ส่งข้อเสนอโครงการเรียบร้อยแล้ว');

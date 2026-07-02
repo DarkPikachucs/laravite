@@ -34,17 +34,40 @@ Route::prefix('app/phy70')->group(function () {
     
     // Test Route
     Route::get('/test-session', function () {
+        $sessionsPath = storage_path('framework/sessions');
+        $testFile = $sessionsPath . '/test_write.txt';
+        $realWriteSuccess = false;
+        try {
+            if (file_put_contents($testFile, 'test') !== false) {
+                $realWriteSuccess = file_exists($testFile);
+                if ($realWriteSuccess) {
+                    unlink($testFile);
+                }
+            }
+        } catch (\Exception $e) {
+            $realWriteSuccess = false;
+        }
+
         return response()->json([
-            'cookie' => config('session.cookie'),
-            'domain' => config('session.domain'),
-            'secure' => config('session.secure'),
             'session_id' => request()->session()->getId(),
-            'has_session' => request()->hasSession(),
+            'session_data' => request()->session()->all(),
+            'phy70_user' => auth('phy70')->user(),
+            'phy70_check' => auth('phy70')->check(),
+            'web_user' => auth('web')->user(),
+            'web_check' => auth('web')->check(),
+            'debug_info' => [
+                'session_driver' => config('session.driver'),
+                'sessions_dir' => $sessionsPath,
+                'is_sessions_dir_exists' => file_exists($sessionsPath),
+                'is_sessions_dir_writeable' => is_writable($sessionsPath),
+                'real_file_write_test' => $realWriteSuccess,
+            ]
         ]);
     });
 });
 
-// Original resource routes for the module
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('phy70s', Phy70Controller::class)->names('phy70');
-});
+// Original resource routes for the module (Commented out to avoid route name conflict 'phy70.index' during route caching)
+// Route::middleware(['auth', 'verified'])->group(function () {
+//     Route::resource('phy70s', Phy70Controller::class)->names('phy70');
+// });
+

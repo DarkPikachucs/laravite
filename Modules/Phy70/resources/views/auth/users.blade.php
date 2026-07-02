@@ -381,6 +381,7 @@
                             <tr>
                                 <th>ชื่อผู้ใช้</th>
                                 <th>อีเมล</th>
+                                <th>หมายเลขโทรศัพท์</th>
                                 <th>บทบาท</th>
                                 <th>เชื่อมต่อ Google</th>
                                 <th style="text-align: right;">การจัดการ</th>
@@ -395,6 +396,7 @@
                                         </div>
                                     </td>
                                     <td style="color: var(--text-muted);">{{ $user->email }}</td>
+                                    <td style="color: var(--text-muted);">{{ $user->phone_number ?: 'ไม่ระบุ' }}</td>
                                     <td>
                                         <span class="role-badge role-{{ $user->role }}">{{ $user->role }}</span>
                                     </td>

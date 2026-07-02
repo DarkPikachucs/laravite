@@ -20,6 +20,9 @@ class Phy70Proposal extends Model
         'development_guideline',
         'main_plan',
         'plan',
+        'target_province',
+        'target_district',
+        'target_subdistrict',
         'project_name',
         'main_activity',
         'operating_agency',
@@ -28,10 +31,12 @@ class Phy70Proposal extends Model
         'contact_address',
         'phone_number',
         'attachments',
+        'activities',
     ];
 
     protected $casts = [
         'attachments' => 'array',
+        'activities' => 'array',
     ];
 
     public function organization()
