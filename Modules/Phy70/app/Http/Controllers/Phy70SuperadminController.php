@@ -122,6 +122,8 @@ class Phy70SuperadminController extends Controller
             'status' => $request->input('status', $proposal->status),
         ]);
 
+        $this->generateCodesIfSubmitted($proposal);
+
         return redirect('/app/phy70/superadmin')->with('success', 'บันทึกการแก้ไขโครงการเรียบร้อยแล้ว');
     }
 
@@ -131,6 +133,7 @@ class Phy70SuperadminController extends Controller
         $proposal = Phy70Proposal::findOrFail($id);
         $request->validate(['status' => 'required|string']);
         $proposal->update(['status' => $request->status]);
+        $this->generateCodesIfSubmitted($proposal);
         return back()->with('success', 'อัปเดตสถานะโครงการสำเร็จ');
     }
 
@@ -139,5 +142,22 @@ class Phy70SuperadminController extends Controller
         $this->checkSuperadmin();
         Phy70Proposal::findOrFail($id)->delete();
         return back()->with('success', 'ลบโครงการสำเร็จ');
+    }
+
+    private function generateCodesIfSubmitted($proposal)
+    {
+        if ($proposal->status === 'submitted' && empty($proposal->project_code)) {
+            $proposal->project_code = 'PRJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
+            $activities = $proposal->activities ?? [];
+            if (is_array($activities)) {
+                foreach ($activities as $index => &$activity) {
+                    if (!isset($activity['activity_code'])) {
+                        $activity['activity_code'] = 'ACT-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT) . '-' . str_pad($index + 1, 2, '0', STR_PAD_LEFT);
+                    }
+                }
+                $proposal->activities = $activities;
+            }
+            $proposal->save();
+        }
     }
 }

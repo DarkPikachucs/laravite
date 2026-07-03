@@ -23,6 +23,10 @@ Route::prefix('app/phy70')->group(function () {
     Route::post('/users/invite', [Phy70AuthController::class, 'inviteUser'])->name('phy70.users.invite');
     Route::post('/users/{id}/reset-password', [Phy70AuthController::class, 'resetPassword'])->name('phy70.users.reset-password');
     
+    // Profile
+    Route::get('/profile', [Phy70AuthController::class, 'showProfile'])->name('phy70.profile');
+    Route::post('/profile', [Phy70AuthController::class, 'updateProfile'])->name('phy70.profile.update');
+    
     // Accept invitation
     Route::get('/invite/{token}', [Phy70AuthController::class, 'showInviteAccept'])->name('phy70.invite.accept');
     Route::post('/invite/{token}', [Phy70AuthController::class, 'acceptInvite']);

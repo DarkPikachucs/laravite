@@ -479,33 +479,6 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 16px;">
-        @if($user)
-        <div class="user-menu">
-          <div class="user-avatar">
-            @if($user->avatar)
-            <img src="{{ $user->avatar }}" alt="avatar">
-            @else
-            {{ strtoupper(substr($user->name, 0, 1)) }}
-            @endif
-          </div>
-          <div class="user-info-text">
-            <span class="user-name">{{ $user->name }}</span>
-            <span class="user-org">{{ $user->organization->name }} ({{ ucfirst($user->role) }})</span>
-          </div>
-        </div>
-
-        <form action="{{ route('phy70.logout') }}" method="POST" style="display: inline;">
-          @csrf
-          <button type="submit" class="btn-danger-outline">ออกจากระบบ</button>
-        </form>
-        @else
-        <a href="{{ route('phy70.login') }}" class="btn-secondary"
-          style="padding: 8px 18px; font-size: 13px;">เข้าสู่ระบบ</a>
-        <a href="{{ route('phy70.register') }}" class="btn-action"
-          style="padding: 8px 18px; font-size: 13px;">ลงทะเบียนหน่วยงาน</a>
-        @endif
-      </div>
     </header>
 
     <!-- Session Messages -->

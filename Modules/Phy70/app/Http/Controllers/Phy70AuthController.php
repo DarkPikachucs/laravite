@@ -120,6 +120,46 @@ class Phy70AuthController extends Controller
         return view('phy70::auth.users', compact('users', 'invitations'));
     }
 
+    public function showProfile()
+    {
+        $user = $this->guard()->user();
+        if (!$user) {
+            return redirect('/app/phy70/login');
+        }
+        return view('phy70::auth.profile', compact('user'));
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $this->guard()->user();
+        if (!$user) {
+            return redirect('/app/phy70/login');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone_number' => 'nullable|string|max:50',
+            'current_password' => 'nullable|string',
+            'password' => 'nullable|string|min:6|confirmed',
+        ]);
+
+        $user->name = $request->name;
+        if ($request->has('phone_number')) {
+            $user->phone_number = $request->phone_number;
+        }
+
+        if ($request->filled('password')) {
+            if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
+                return back()->with('error', 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
+            }
+            $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return back()->with('success', 'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว');
+    }
+
     public function inviteUser(Request $request)
     {
         $currentUser = $this->guard()->user();

@@ -118,7 +118,7 @@ class Phy70Controller extends Controller
             }
         }
 
-        Phy70Proposal::create([
+        $proposal = Phy70Proposal::create([
             'organization_id' => $user->organization_id,
             'user_id' => $user->id,
             'province_issue' => $request->province_issue,
@@ -138,6 +138,20 @@ class Phy70Controller extends Controller
             'activities' => $request->activities,
             'status' => $request->input('status', 'submitted'),
         ]);
+
+        if ($proposal->status === 'submitted' && empty($proposal->project_code)) {
+            $proposal->project_code = 'PRJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
+            $activities = $proposal->activities ?? [];
+            if (is_array($activities)) {
+                foreach ($activities as $index => &$activity) {
+                    if (!isset($activity['activity_code'])) {
+                        $activity['activity_code'] = 'ACT-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT) . '-' . str_pad($index + 1, 2, '0', STR_PAD_LEFT);
+                    }
+                }
+                $proposal->activities = $activities;
+            }
+            $proposal->save();
+        }
 
         $msg = $isDraft ? 'บันทึกร่างข้อเสนอโครงการเรียบร้อยแล้ว' : 'ส่งข้อเสนอโครงการเรียบร้อยแล้ว';
         return redirect('/app/phy70')->with('success', $msg);

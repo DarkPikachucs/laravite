@@ -21,18 +21,24 @@
       --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       background-color: var(--bg-base) !important;
       color: var(--text-main);
       font-family: 'Outfit', 'Prompt', sans-serif;
       min-height: 100vh;
-      padding: 40px 24px;
     }
 
     .form-container {
       max-width: 850px;
       margin: 0 auto;
       position: relative;
+      padding: 40px 24px;
       z-index: 10;
     }
 
@@ -311,8 +317,15 @@
     }
 
     @keyframes modalSlide {
-      from { transform: translateY(15px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from {
+        transform: translateY(15px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
 
     .modal-header {
@@ -394,7 +407,7 @@
       color: var(--text-muted);
     }
 
-    .tree-node.open > .tree-node-header .arrow {
+    .tree-node.open>.tree-node-header .arrow {
       transform: rotate(180deg);
       color: var(--secondary);
     }
@@ -406,7 +419,7 @@
       background: rgba(0, 0, 0, 0.15);
     }
 
-    .tree-node.open > .tree-node-body {
+    .tree-node.open>.tree-node-body {
       display: block;
     }
 
@@ -437,7 +450,8 @@
 
   <div class="form-container">
     <header class="header">
-      <h2 class="title">{{ isset($proposal) ? 'แก้ไขข้อเสนอโครงการ' : 'จัดทำข้อเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2570' }}</h2>
+      <h2 class="title">{{ isset($proposal) ? 'แก้ไขข้อเสนอโครงการ' : 'จัดทำข้อเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ
+        2570' }}</h2>
       <a href="/app/phy70" class="btn-secondary">ยกเลิก</a>
     </header>
 
@@ -454,10 +468,12 @@
     @endif
 
     <div class="glass-card">
-      <form action="{{ isset($proposal) ? route('phy70.superadmin.proposal.update', $proposal->id) : route('phy70.proposal.store') }}" method="POST" id="proposal-form" enctype="multipart/form-data">
+      <form
+        action="{{ isset($proposal) ? route('phy70.superadmin.proposal.update', $proposal->id) : route('phy70.proposal.store') }}"
+        method="POST" id="proposal-form" enctype="multipart/form-data">
         @csrf
         @if(isset($proposal))
-            @method('PUT')
+        @method('PUT')
         @endif
 
         <!-- ================== SECTION 1 ================== -->
@@ -465,21 +481,26 @@
           <div class="section-header">
             <h3 class="section-title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/>
+                <circle cx="12" cy="12" r="10" />
+                <path d="m10 15 5-3-5-3v6Z" />
               </svg>
               ส่วนที่ 1: ความสอดคล้องระดับจังหวัด (จังหวัดเพชรบูรณ์)
             </h3>
           </div>
 
           <!-- Hidden inputs for validation & database submission -->
-          <input type="hidden" id="province_issue" name="province_issue" value="{{ old('province_issue', $proposal->province_issue ?? '') }}" required>
-          <input type="hidden" id="development_guideline" name="development_guideline" value="{{ old('development_guideline', $proposal->development_guideline ?? '') }}" required>
-          <input type="hidden" id="main_plan" name="main_plan" value="{{ old('main_plan', $proposal->main_plan ?? '') }}" required>
+          <input type="hidden" id="province_issue" name="province_issue"
+            value="{{ old('province_issue', $proposal->province_issue ?? '') }}" required>
+          <input type="hidden" id="development_guideline" name="development_guideline"
+            value="{{ old('development_guideline', $proposal->development_guideline ?? '') }}" required>
+          <input type="hidden" id="main_plan" name="main_plan"
+            value="{{ old('main_plan', $proposal->main_plan ?? '') }}" required>
           <input type="hidden" id="plan" name="plan" value="{{ old('plan', $proposal->plan ?? '') }}" required>
 
           <div class="form-group">
-            <label class="form-label">ข้อมูลเป้าหมายและแผนความสอดคล้องระดับจังหวัดที่เลือก <span style="color: var(--danger);">*</span></label>
-            
+            <label class="form-label">ข้อมูลเป้าหมายและแผนความสอดคล้องระดับจังหวัดที่เลือก <span
+                style="color: var(--danger);">*</span></label>
+
             <div class="selection-display-box" id="provincial-display-box">
               <div class="display-field">
                 <div class="display-label">ประเด็นการพัฒนาจังหวัด</div>
@@ -510,7 +531,11 @@
           <div class="section-header">
             <h3 class="section-title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
               </svg>
               ส่วนที่ 2: รายละเอียดข้อเสนอโครงการและผู้ประสานงาน
             </h3>
@@ -518,22 +543,26 @@
 
           <!-- Target Area (พื้นที่เป้าหมาย) -->
           <div class="form-group">
-            <label class="form-label">พื้นที่เป้าหมายการดำเนินโครงการ <span style="color: var(--danger);">*</span></label>
+            <label class="form-label">พื้นที่เป้าหมายการดำเนินโครงการ <span
+                style="color: var(--danger);">*</span></label>
             <div class="grid-3-col">
               <div>
-                <label class="form-label" for="target_province" style="font-size: 12px; color: var(--text-muted);">จังหวัด</label>
+                <label class="form-label" for="target_province"
+                  style="font-size: 12px; color: var(--text-muted);">จังหวัด</label>
                 <select id="target_province" name="target_province" class="form-control" required>
                   <option value="เพชรบูรณ์" selected>เพชรบูรณ์</option>
                 </select>
               </div>
               <div>
-                <label class="form-label" for="target_district" style="font-size: 12px; color: var(--text-muted);">อำเภอ</label>
+                <label class="form-label" for="target_district"
+                  style="font-size: 12px; color: var(--text-muted);">อำเภอ</label>
                 <select id="target_district" name="target_district" class="form-control">
                   <option value="">-- เลือกอำเภอ --</option>
                 </select>
               </div>
               <div>
-                <label class="form-label" for="target_subdistrict" style="font-size: 12px; color: var(--text-muted);">ตำบล</label>
+                <label class="form-label" for="target_subdistrict"
+                  style="font-size: 12px; color: var(--text-muted);">ตำบล</label>
                 <select id="target_subdistrict" name="target_subdistrict" class="form-control" disabled>
                   <option value="">-- เลือกตำบล --</option>
                 </select>
@@ -542,29 +571,38 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="project_name">ชื่อโครงการ <span style="color: var(--danger);">*</span></label>
+            <label class="form-label" for="project_name">ชื่อโครงการ <span
+                style="color: var(--danger);">*</span></label>
             <input type="text" id="project_name" name="project_name" class="form-control"
-              placeholder="กรุณาระบุชื่อโครงการเต็ม" value="{{ old('project_name', $proposal->project_name ?? '') }}" required>
+              placeholder="กรุณาระบุชื่อโครงการเต็ม" value="{{ old('project_name', $proposal->project_name ?? '') }}"
+              required>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="main_activity">กิจกรรมหลัก <span style="color: var(--danger);">*</span></label>
+            <label class="form-label" for="main_activity">กิจกรรมหลัก <span
+                style="color: var(--danger);">*</span></label>
             <textarea id="main_activity" name="main_activity" class="form-control"
-              placeholder="ระบุรายละเอียดกระบวนงานหรือกิจกรรมหลักของโครงการ" required>{{ old('main_activity', $proposal->main_activity ?? '') }}</textarea>
+              placeholder="ระบุรายละเอียดกระบวนงานหรือกิจกรรมหลักของโครงการ"
+              required>{{ old('main_activity', $proposal->main_activity ?? '') }}</textarea>
           </div>
 
           <div class="grid-2-col">
             <div class="form-group">
-              <label class="form-label" for="operating_agency">หน่วยดำเนินการ <span style="color: var(--danger);">*</span></label>
+              <label class="form-label" for="operating_agency">หน่วยดำเนินการ <span
+                  style="color: var(--danger);">*</span></label>
               <input type="text" id="operating_agency" name="operating_agency" class="form-control"
                 value="{{ old('operating_agency', auth('phy70')->user()->organization->name) }}" readonly
-                style="background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.6); border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; width: 100%;" required>
+                style="background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.6); border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; width: 100%;"
+                required>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="responsible_person">ผู้รับผิดชอบ <span style="color: var(--danger);">*</span></label>
+              <label class="form-label" for="responsible_person">ผู้รับผิดชอบ <span
+                  style="color: var(--danger);">*</span></label>
               <input type="text" id="responsible_person" name="responsible_person" class="form-control"
-                placeholder="ชื่อ นามสกุล" value="{{ old('responsible_person', $proposal->responsible_person ?? auth('phy70')->user()->name) }}" required>
+                placeholder="ชื่อ นามสกุล"
+                value="{{ old('responsible_person', $proposal->responsible_person ?? auth('phy70')->user()->name) }}"
+                required>
             </div>
           </div>
 
@@ -576,9 +614,12 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="phone_number">หมายเลขโทรศัพท์ <span style="color: var(--danger);">*</span></label>
+              <label class="form-label" for="phone_number">หมายเลขโทรศัพท์ <span
+                  style="color: var(--danger);">*</span></label>
               <input type="text" id="phone_number" name="phone_number" class="form-control"
-                placeholder="เช่น 0891234567" value="{{ old('phone_number', $proposal->phone_number ?? auth('phy70')->user()->phone_number) }}" required>
+                placeholder="เช่น 0891234567"
+                value="{{ old('phone_number', $proposal->phone_number ?? auth('phy70')->user()->phone_number) }}"
+                required>
             </div>
           </div>
 
@@ -596,7 +637,8 @@
                   d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
               </svg>
               <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">คลิกที่นี่ เพื่อเลือกไฟล์แนบ</div>
-              <div style="font-size: 12px; color: var(--text-muted);">รองรับไฟล์รูปภาพ, เอกสาร PDF, Word, Excel (ขนาดสูงสุด 10MB ต่อไฟล์)</div>
+              <div style="font-size: 12px; color: var(--text-muted);">รองรับไฟล์รูปภาพ, เอกสาร PDF, Word, Excel
+                (ขนาดสูงสุด 10MB ต่อไฟล์)</div>
               <input type="file" id="attachments" name="attachments[]" multiple style="display: none;"
                 onchange="updateFileList(this)">
             </div>
@@ -606,14 +648,16 @@
 
         <!-- ================== SECTION 3 ================== -->
         <div class="form-section" id="section-4" style="margin-top: 40px;">
-          <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div class="section-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h3 class="section-title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
               ส่วนที่ 3: กิจกรรมย่อยภายใต้โครงการ
             </h3>
-            <button type="button" class="btn-action" onclick="addActivity()" style="background: linear-gradient(135deg, var(--secondary) 0%, rgba(6, 182, 212, 0.8) 100%); box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);">
+            <button type="button" class="btn-action" onclick="addActivity()"
+              style="background: linear-gradient(135deg, var(--secondary) 0%, rgba(6, 182, 212, 0.8) 100%); box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);">
               ➕ เพิ่มกิจกรรม
             </button>
           </div>
@@ -621,18 +665,23 @@
           <div id="activities-container" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
             <!-- Dynamic activities will be appended here -->
           </div>
-          
-          <div id="no-activities-message" style="text-align: center; padding: 32px; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-muted); font-size: 14px;">
+
+          <div id="no-activities-message"
+            style="text-align: center; padding: 32px; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-muted); font-size: 14px;">
             ยังไม่มีการเพิ่มกิจกรรมย่อย (กรุณากดปุ่ม "เพิ่มกิจกรรม" ด้านบนหากมีกิจกรรมย่อยภายใต้โครงการ)
           </div>
         </div>
 
         <!-- Submit Button Row -->
-        <div style="text-align: right; margin-top: 32px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-          <button type="submit" name="status" value="draft" class="btn-action" style="background: rgba(255,255,255,0.1); font-size: 15px; padding: 14px 28px; box-shadow: none;" formnovalidate>
+        <div
+          style="text-align: right; margin-top: 32px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="submit" name="status" value="draft" class="btn-action"
+            style="background: rgba(255,255,255,0.1); font-size: 15px; padding: 14px 28px; box-shadow: none;"
+            formnovalidate>
             💾 บันทึกร่าง (Save Draft)
           </button>
-          <button type="submit" name="status" value="{{ isset($proposal) ? $proposal->status : 'submitted' }}" class="btn-action" style="font-size: 15px; padding: 14px 28px;">
+          <button type="submit" name="status" value="{{ isset($proposal) ? $proposal->status : 'submitted' }}"
+            class="btn-action" style="font-size: 15px; padding: 14px 28px;">
             ✓ {{ isset($proposal) ? 'บันทึกการแก้ไข' : 'ส่งข้อเสนอโครงการ' }}
           </button>
         </div>
@@ -641,7 +690,7 @@
   </div>
 
   <!-- ================== MODALS ================== -->
-  
+
   <!-- Provincial Modal -->
   <div id="provincial-modal" class="custom-modal">
     <div class="modal-content">
@@ -651,7 +700,8 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
-          คลิกเลือก <b>ประเด็นการพัฒนา</b> ➔ <b>แนวทางพัฒนา</b> ➔ <b>แผนงานหลัก</b> และ <b>แผนงานย่อย</b> ที่สอดคล้องกับโครงการของคุณ:
+          คลิกเลือก <b>ประเด็นการพัฒนา</b> ➔ <b>แนวทางพัฒนา</b> ➔ <b>แผนงานหลัก</b> และ <b>แผนงานย่อย</b>
+          ที่สอดคล้องกับโครงการของคุณ:
         </p>
         <div id="provincial-tree-container" class="selection-tree"></div>
       </div>

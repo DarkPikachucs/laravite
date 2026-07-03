@@ -23,9 +23,13 @@
             color: var(--text-main);
             font-family: 'Outfit', 'Prompt', sans-serif;
             min-height: 100vh;
+        }
+
+        .auth-wrapper {
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: calc(100vh - 65px); /* Minus navbar height */
             padding: 24px;
         }
 
@@ -176,7 +180,8 @@
 
     <div class="bg-glow"></div>
 
-    <div class="auth-container">
+    <div class="auth-wrapper">
+        <div class="auth-container">
         <div class="glass-card">
             <div class="auth-header">
                 <h2 class="auth-title">ลงทะเบียนหน่วยงานใหม่</h2>
