@@ -276,6 +276,33 @@
         .map-legend-item { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
         .map-legend-dot { border-radius: 50%; background: #6366f1; opacity: 0.55; flex-shrink: 0; }
 
+        /* Leaflet layer selector — ให้ใช้ฟอนต์เดียวกับหน้าเว็บ */
+        .leaflet-control-layers {
+            border: 1px solid var(--border) !important;
+            border-radius: 12px !important;
+            box-shadow: var(--shadow-card) !important;
+            padding: 8px 6px !important;
+            background: rgba(255,255,255,0.97) !important;
+            font-family: 'Outfit', 'IBM Plex Sans Thai', sans-serif !important;
+        }
+        .leaflet-control-layers-expanded { padding: 8px 8px !important; }
+        .leaflet-control-layers-list { margin: 0; }
+        .leaflet-control-layers-base label {
+            display: flex; align-items: center; gap: 8px; margin: 0;
+            padding: 6px 10px; border-radius: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 500; color: var(--text-main);
+            transition: background 0.15s ease;
+        }
+        .leaflet-control-layers-base label:hover { background: var(--primary-soft); }
+        .leaflet-control-layers-base label > span {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .leaflet-control-layers-selector {
+            width: 15px; height: 15px; margin: 0 !important;
+            accent-color: var(--primary); cursor: pointer; flex-shrink: 0;
+        }
+        .leaflet-control-layers-separator { margin: 6px 4px; border-top-color: var(--border); }
+
         /* Layer mapping list (ranked legend below the map) */
         .layer-map { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
         .layer-row {
