@@ -23,7 +23,13 @@ class Phy70Proposal extends Model
         'target_province',
         'target_district',
         'target_subdistrict',
+        'target_group',
         'project_name',
+        'principles',
+        'objectives',
+        'kpis',
+        'output',
+        'outcome',
         'main_activity',
         'operating_agency',
         'responsible_person',
@@ -31,13 +37,19 @@ class Phy70Proposal extends Model
         'contact_address',
         'phone_number',
         'attachments',
+        'documents',
         'activities',
         'status',
+        'project_code',
     ];
 
     protected $casts = [
         'attachments' => 'array',
+        'documents' => 'array',
         'activities' => 'array',
+        'kpis' => 'array',
+        'target_district' => 'array',
+        'target_subdistrict' => 'array',
     ];
 
     public function organization()

@@ -62,47 +62,53 @@ class Phy70Controller extends Controller
         $request->validate([
             // Section 2
             'province_issue' => $req . '|string',
-            'development_guideline' => $req . '|string',
-            'main_plan' => $req . '|string',
-            'plan' => $req . '|string',
+            'development_guideline' => 'nullable|string',
+            'main_plan' => 'nullable|string',
+            'plan' => 'nullable|string',
             // Section 3
             'target_province' => $req . '|string|max:255',
-            'target_district' => 'nullable|string|max:255',
-            'target_subdistrict' => 'nullable|string|max:255',
+            'target_district' => 'nullable|array',
+            'target_district.*' => 'string|max:255',
+            'target_subdistrict' => 'nullable|array',
+            'target_subdistrict.*' => 'string|max:255',
+            'target_group' => $req . '|string',
             'project_name' => 'required|string|max:255',
-            'main_activity' => $req . '|string',
+            'principles' => $req . '|string',
+            'objectives' => $req . '|string',
+            'kpis' => 'nullable|array',
+            'output' => $req . '|string',
+            'outcome' => $req . '|string',
+            'main_activity' => 'nullable|string',
             'operating_agency' => $req . '|string|max:255',
             'responsible_person' => $req . '|string|max:255',
-            'position' => $req . '|string|max:255',
+            'position' => 'nullable|string|max:255',
             'phone_number' => $req . '|string|max:50',
-            'attachments.*' => 'nullable|file|max:10240', // Max 10MB per file
+            'attachments.*' => 'nullable|file|max:10240',
+            'documents' => $isDraft ? 'nullable|array' : 'required|array|min:2',
+            'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,zip,rar|max:20480',
             'activities' => 'nullable|array',
             'activities.*.name' => $req . '|string|max:255',
             'activities.*.budget' => $req . '|numeric|min:0',
             'activities.*.responsible_person' => $req . '|string|max:255',
-            'activities.*.operating_agency' => $req . '|string|max:255',
-            'activities.*.involved_agencies' => $req . '|string|max:255',
+            'activities.*.operating_agency' => 'nullable|string|max:255',
+            'activities.*.involved_agencies' => 'nullable|string|max:255',
             'activities.*.guideline' => $req . '|string|max:255',
         ], [
             'province_issue.required' => 'กรุณาเลือกประเด็นการพัฒนาของจังหวัด',
-            'development_guideline.required' => 'กรุณาเลือกแนวทางการพัฒนาของจังหวัด',
-            'main_plan.required' => 'กรุณาเลือกแผนงานหลักของจังหวัด',
-            'plan.required' => 'กรุณาเลือกแผนงานของจังหวัด',
-            'target_province.required' => 'กรุณาเลือกจังหวัดพื้นที่เป้าหมาย',
             'project_name.required' => 'กรุณากรอกชื่อโครงการ',
-            'main_activity.required' => 'กรุณากรอกกิจกรรมหลัก',
             'operating_agency.required' => 'กรุณากรอกหน่วยดำเนินการ',
             'responsible_person.required' => 'กรุณากรอกผู้รับผิดชอบ',
-            'position.required' => 'กรุณากรอกตำแหน่ง',
             'phone_number.required' => 'กรุณากรอกหมายเลขโทรศัพท์',
             'activities.*.name.required' => 'กรุณากรอกชื่อกิจกรรมในส่วนที่ 4',
             'activities.*.budget.required' => 'กรุณากรอกงบประมาณของกิจกรรมในส่วนที่ 4',
             'activities.*.budget.numeric' => 'งบประมาณในส่วนที่ 4 ต้องเป็นตัวเลขเท่านั้น',
             'activities.*.budget.min' => 'งบประมาณในส่วนที่ 4 ต้องมากกว่าหรือเท่ากับ 0',
             'activities.*.responsible_person.required' => 'กรุณากรอกผู้รับผิดชอบกิจกรรมในส่วนที่ 4',
-            'activities.*.operating_agency.required' => 'กรุณากรอกหน่วยงานรับผิดชอบในส่วนที่ 4',
-            'activities.*.involved_agencies.required' => 'กรุณากรอกหน่วยงานที่เกี่ยวข้องในส่วนที่ 4',
             'activities.*.guideline.required' => 'กรุณาเลือกแนวทางการพัฒนาจังหวัดในส่วนที่ 4',
+            'documents.required' => 'กรุณาแนบเอกสารโครงการอย่างน้อย 2 ไฟล์',
+            'documents.min' => 'กรุณาแนบเอกสารโครงการอย่างน้อย 2 ไฟล์',
+            'documents.*.mimes' => 'รองรับเฉพาะไฟล์ PDF, Word, Excel, ZIP, RAR เท่านั้น',
+            'documents.*.max' => 'ขนาดไฟล์ต้องไม่เกิน 20MB',
         ]);
 
         $attachments = [];
@@ -112,7 +118,20 @@ class Phy70Controller extends Controller
                     $path = $file->store('phy70/attachments', 'public');
                     $attachments[] = [
                         'name' => $file->getClientOriginalName(),
-                        'path' => '/storage/' . $path,
+                        'path' => $path,
+                    ];
+                }
+            }
+        }
+
+        $documents = [];
+        if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                if ($file->isValid()) {
+                    $path = $file->store('phy70/documents', 'public');
+                    $documents[] = [
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path
                     ];
                 }
             }
@@ -128,13 +147,20 @@ class Phy70Controller extends Controller
             'target_province' => $request->target_province,
             'target_district' => $request->target_district,
             'target_subdistrict' => $request->target_subdistrict,
+            'target_group' => $request->target_group,
             'project_name' => $request->project_name,
+            'principles' => $request->principles,
+            'objectives' => $request->objectives,
+            'kpis' => $request->kpis,
+            'output' => $request->output,
+            'outcome' => $request->outcome,
             'main_activity' => $request->main_activity,
             'operating_agency' => $request->operating_agency,
             'responsible_person' => $request->responsible_person,
             'position' => $request->position,
             'phone_number' => $request->phone_number,
             'attachments' => $attachments,
+            'documents' => $documents,
             'activities' => $request->activities,
             'status' => $request->input('status', 'submitted'),
         ]);

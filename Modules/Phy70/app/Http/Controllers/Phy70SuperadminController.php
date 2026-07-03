@@ -87,22 +87,51 @@ class Phy70SuperadminController extends Controller
         $isDraft = $request->input('status') === 'draft';
         $req = $isDraft ? 'nullable' : 'required';
 
+        $existingDocsCount = !empty($proposal->documents) && is_array($proposal->documents) ? count($proposal->documents) : 0;
+        $newDocsCount = $request->hasFile('documents') ? count($request->file('documents')) : 0;
+
+        if (!$isDraft && ($existingDocsCount + $newDocsCount) < 2) {
+            return back()->withErrors(['documents' => 'กรุณาแนบเอกสารโครงการอย่างน้อย 2 ไฟล์'])->withInput();
+        }
+
         $request->validate([
+            'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,zip,rar|max:20480',
             'province_issue' => $req . '|string',
-            'development_guideline' => $req . '|string',
-            'main_plan' => $req . '|string',
-            'plan' => $req . '|string',
+            'development_guideline' => 'nullable|string',
+            'main_plan' => 'nullable|string',
+            'plan' => 'nullable|string',
             'target_province' => $req . '|string|max:255',
-            'target_district' => 'nullable|string|max:255',
-            'target_subdistrict' => 'nullable|string|max:255',
+            'target_district' => 'nullable|array',
+            'target_district.*' => 'string|max:255',
+            'target_subdistrict' => 'nullable|array',
+            'target_subdistrict.*' => 'string|max:255',
+            'target_group' => $req . '|string',
             'project_name' => 'required|string|max:255',
-            'main_activity' => $req . '|string',
+            'principles' => $req . '|string',
+            'objectives' => $req . '|string',
+            'kpis' => 'nullable|array',
+            'output' => $req . '|string',
+            'outcome' => $req . '|string',
+            'main_activity' => 'nullable|string',
             'operating_agency' => $req . '|string|max:255',
             'responsible_person' => $req . '|string|max:255',
-            'position' => $req . '|string|max:255',
+            'position' => 'nullable|string|max:255',
             'phone_number' => $req . '|string|max:50',
             'activities' => 'nullable|array',
         ]);
+
+        $documents = !empty($proposal->documents) && is_array($proposal->documents) ? $proposal->documents : [];
+        if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                if ($file->isValid()) {
+                    $path = $file->store('phy70/documents', 'public');
+                    $documents[] = [
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path
+                    ];
+                }
+            }
+        }
 
         $proposal->update([
             'province_issue' => $request->province_issue,
@@ -112,12 +141,19 @@ class Phy70SuperadminController extends Controller
             'target_province' => $request->target_province,
             'target_district' => $request->target_district,
             'target_subdistrict' => $request->target_subdistrict,
+            'target_group' => $request->target_group,
             'project_name' => $request->project_name,
+            'principles' => $request->principles,
+            'objectives' => $request->objectives,
+            'kpis' => $request->kpis,
+            'output' => $request->output,
+            'outcome' => $request->outcome,
             'main_activity' => $request->main_activity,
             'operating_agency' => $request->operating_agency,
             'responsible_person' => $request->responsible_person,
             'position' => $request->position,
             'phone_number' => $request->phone_number,
+            'documents' => $documents,
             'activities' => $request->activities,
             'status' => $request->input('status', $proposal->status),
         ]);

@@ -128,7 +128,7 @@
       font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.5px;
-      background: linear-gradient(to right, #ffffff, #94a3b8);
+      background: linear-gradient(to right, var(--text-main), var(--text-muted));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -176,10 +176,16 @@
       flex-direction: column;
     }
 
+    .timeline-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
     .user-name {
       font-size: 13px;
       font-weight: 600;
-      color: #fff;
+      color: var(--text-main);
     }
 
     .user-org {
@@ -228,7 +234,7 @@
       font-weight: 600;
       margin-bottom: 12px;
       font-family: 'Prompt', sans-serif;
-      background: linear-gradient(to right, #fff, #cbd5e1);
+      background: linear-gradient(to right, var(--text-main), var(--text-muted));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -271,7 +277,7 @@
     .metric-value {
       font-size: 36px;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--text-main);
       font-family: 'Outfit', sans-serif;
     }
 
@@ -643,7 +649,7 @@
             @foreach($organizations as $org)
             <div
               style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
-              <div style="font-size: 14px; font-weight: 600; color: #fff;">{{ $org->name }}</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">{{ $org->name }}</div>
               <div style="font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px;">
                 <span>ผู้ประสานงาน: <strong style="color: var(--secondary);">{{ $org->coordinator_name
                     }}</strong></span>
