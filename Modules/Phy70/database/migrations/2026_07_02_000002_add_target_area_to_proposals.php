@@ -11,9 +11,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('phy70_proposals', function (Blueprint $table) {
-            $table->string('target_province')->nullable();
-            $table->string('target_district')->nullable();
-            $table->string('target_subdistrict')->nullable();
+            if (! Schema::hasColumn('phy70_proposals', 'target_province')) {
+                $table->string('target_province')->nullable();
+            }
+            if (! Schema::hasColumn('phy70_proposals', 'target_district')) {
+                $table->string('target_district')->nullable();
+            }
+            if (! Schema::hasColumn('phy70_proposals', 'target_subdistrict')) {
+                $table->string('target_subdistrict')->nullable();
+            }
         });
     }
 
