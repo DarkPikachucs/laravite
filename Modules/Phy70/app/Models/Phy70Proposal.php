@@ -32,6 +32,7 @@ class Phy70Proposal extends Model
         'phone_number',
         'attachments',
         'activities',
+        'status',
     ];
 
     protected $casts = [

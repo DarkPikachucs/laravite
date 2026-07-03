@@ -20,10 +20,13 @@ class Phy70Controller extends Controller
         $proposals = collect();
 
         if ($user) {
-            // Get proposals of the current user's organization
-            $proposals = Phy70Proposal::where('organization_id', $user->organization_id)
-                ->orderBy('created_at', 'desc')
-                ->get();
+            if ($user->role === 'superadmin') {
+                $proposals = Phy70Proposal::orderBy('created_at', 'desc')->get();
+            } else {
+                $proposals = Phy70Proposal::where('organization_id', $user->organization_id)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+            }
         }
 
         // Get all registered organizations with their coordinators (admins)
@@ -53,30 +56,33 @@ class Phy70Controller extends Controller
             return redirect('/app/phy70/login');
         }
 
+        $isDraft = $request->input('status') === 'draft';
+        $req = $isDraft ? 'nullable' : 'required';
+
         $request->validate([
             // Section 2
-            'province_issue' => 'required|string',
-            'development_guideline' => 'required|string',
-            'main_plan' => 'required|string',
-            'plan' => 'required|string',
+            'province_issue' => $req . '|string',
+            'development_guideline' => $req . '|string',
+            'main_plan' => $req . '|string',
+            'plan' => $req . '|string',
             // Section 3
-            'target_province' => 'required|string|max:255',
+            'target_province' => $req . '|string|max:255',
             'target_district' => 'nullable|string|max:255',
             'target_subdistrict' => 'nullable|string|max:255',
             'project_name' => 'required|string|max:255',
-            'main_activity' => 'required|string',
-            'operating_agency' => 'required|string|max:255',
-            'responsible_person' => 'required|string|max:255',
-            'position' => 'required|string|max:255',
-            'phone_number' => 'required|string|max:50',
+            'main_activity' => $req . '|string',
+            'operating_agency' => $req . '|string|max:255',
+            'responsible_person' => $req . '|string|max:255',
+            'position' => $req . '|string|max:255',
+            'phone_number' => $req . '|string|max:50',
             'attachments.*' => 'nullable|file|max:10240', // Max 10MB per file
             'activities' => 'nullable|array',
-            'activities.*.name' => 'required|string|max:255',
-            'activities.*.budget' => 'required|numeric|min:0',
-            'activities.*.responsible_person' => 'required|string|max:255',
-            'activities.*.operating_agency' => 'required|string|max:255',
-            'activities.*.involved_agencies' => 'required|string|max:255',
-            'activities.*.guideline' => 'required|string|max:255',
+            'activities.*.name' => $req . '|string|max:255',
+            'activities.*.budget' => $req . '|numeric|min:0',
+            'activities.*.responsible_person' => $req . '|string|max:255',
+            'activities.*.operating_agency' => $req . '|string|max:255',
+            'activities.*.involved_agencies' => $req . '|string|max:255',
+            'activities.*.guideline' => $req . '|string|max:255',
         ], [
             'province_issue.required' => 'กรุณาเลือกประเด็นการพัฒนาของจังหวัด',
             'development_guideline.required' => 'กรุณาเลือกแนวทางการพัฒนาของจังหวัด',
@@ -130,9 +136,11 @@ class Phy70Controller extends Controller
             'phone_number' => $request->phone_number,
             'attachments' => $attachments,
             'activities' => $request->activities,
+            'status' => $request->input('status', 'submitted'),
         ]);
 
-        return redirect('/app/phy70')->with('success', 'ส่งข้อเสนอโครงการเรียบร้อยแล้ว');
+        $msg = $isDraft ? 'บันทึกร่างข้อเสนอโครงการเรียบร้อยแล้ว' : 'ส่งข้อเสนอโครงการเรียบร้อยแล้ว';
+        return redirect('/app/phy70')->with('success', $msg);
     }
 
     public function showProposal($id)
@@ -142,7 +150,11 @@ class Phy70Controller extends Controller
             return redirect('/app/phy70/login');
         }
 
-        $proposal = Phy70Proposal::where('organization_id', $user->organization_id)->findOrFail($id);
+        $query = Phy70Proposal::query();
+        if ($user->role !== 'superadmin') {
+            $query->where('organization_id', $user->organization_id);
+        }
+        $proposal = $query->findOrFail($id);
 
         return view('phy70::proposals.show', compact('proposal'));
     }

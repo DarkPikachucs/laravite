@@ -6,5 +6,9 @@
   {
     "type": "sqlite",
     "path": "c:\\laragon\\www\\laravite\\Modules\\Phy70\\database\\phy70.sqlite"
+  },
+  {
+    "type": "sqlite",
+    "path": "c:\\laragon\\www\\laravite\\database\\database.sqlite"
   }
 ]

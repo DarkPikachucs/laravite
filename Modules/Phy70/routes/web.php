@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Phy70\Http\Controllers\Phy70Controller;
 use Modules\Phy70\Http\Controllers\Phy70AuthController;
+use Modules\Phy70\Http\Controllers\Phy70SuperadminController;
 
 Route::prefix('app/phy70')->group(function () {
     Route::get('/', [Phy70Controller::class, 'index'])->name('phy70.index');
@@ -31,6 +32,17 @@ Route::prefix('app/phy70')->group(function () {
     Route::get('/proposal/create', [Phy70Controller::class, 'createProposal'])->name('phy70.proposal.create');
     Route::post('/proposal', [Phy70Controller::class, 'storeProposal'])->name('phy70.proposal.store');
     Route::get('/proposal/{id}', [Phy70Controller::class, 'showProposal'])->name('phy70.proposal.show');
+    
+    // Superadmin
+    Route::get('/superadmin', [Phy70SuperadminController::class, 'index'])->name('phy70.superadmin.index');
+    Route::post('/superadmin/organization/{id}', [Phy70SuperadminController::class, 'updateOrganization'])->name('phy70.superadmin.org.update');
+    Route::delete('/superadmin/organization/{id}', [Phy70SuperadminController::class, 'deleteOrganization'])->name('phy70.superadmin.org.delete');
+    Route::post('/superadmin/user/{id}/role', [Phy70SuperadminController::class, 'updateUserRole'])->name('phy70.superadmin.user.role');
+    Route::delete('/superadmin/user/{id}', [Phy70SuperadminController::class, 'deleteUser'])->name('phy70.superadmin.user.delete');
+    Route::get('/superadmin/proposal/{id}/edit', [Phy70SuperadminController::class, 'editProposal'])->name('phy70.superadmin.proposal.edit');
+    Route::put('/superadmin/proposal/{id}', [Phy70SuperadminController::class, 'updateProposal'])->name('phy70.superadmin.proposal.update');
+    Route::post('/superadmin/proposal/{id}/status', [Phy70SuperadminController::class, 'updateProposalStatus'])->name('phy70.superadmin.proposal.status');
+    Route::delete('/superadmin/proposal/{id}', [Phy70SuperadminController::class, 'deleteProposal'])->name('phy70.superadmin.proposal.delete');
     
     // Test Route
     Route::get('/test-session', function () {

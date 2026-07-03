@@ -1,15 +1,13 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-// Uncomment the import for your frontend framework:
-// import vue from '@vitejs/plugin-vue';
-// import react from '@vitejs/plugin-react';
-// import { svelte } from '@sveltejs/vite-plugin-svelte';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+    root: __dirname,
     build: {
         outDir: '../../public/build-phy70',
         emptyOutDir: true,
-        manifest: true,
+        manifest: 'manifest.json',
     },
     plugins: [
         laravel({
@@ -17,25 +15,15 @@ export default defineConfig({
             buildDirectory: 'build-phy70',
             input: [
                 __dirname + '/resources/assets/sass/app.scss',
-                __dirname + '/resources/assets/js/app.js'
+                __dirname + '/resources/assets/js/app.jsx'
             ],
             refresh: true,
         }),
-        // Uncomment the plugin for your frontend framework:
-        // vue({
-        //     template: {
-        //         transformAssetUrls: {
-        //             base: null,
-        //             includeAbsolute: false,
-        //         },
-        //     },
-        // }),
-        // react(),
-        // svelte(),
+        react(),
     ],
     resolve: {
         alias: {
-            '@': __dirname + '/resources/js',
+            '@': __dirname + '/resources/assets/js',
         },
     },
 });

@@ -202,6 +202,12 @@
             color: var(--text-muted);
         }
 
+        .role-superadmin {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
         /* Alerts & Info box */
         .alert {
             padding: 12px 16px;
@@ -353,16 +359,30 @@
 
         <!-- Invitation Link Created Feedback -->
         @if(session('invitation_link'))
+            @php
+                $orgName = auth('phy70')->user()->organization->name ?? 'หน่วยงานของคุณ';
+                $mailSubject = "📩 คำเชิญเข้าร่วมระบบ PHY70 จาก " . $orgName;
+                $mailBody = "👋 สวัสดีครับ/ค่ะ,\n\nคุณได้รับคำเชิญเข้าร่วมระบบ PHY70 (ระบบเสนอโครงการจังหวัดเพชรบูรณ์ ปี 2570)\nในนามของหน่วยงาน: 🏢 " . $orgName . "\n\n👉 กรุณาคลิกลิงก์ด้านล่างเพื่อสร้างบัญชีผู้ใช้และเข้าร่วมเครือข่ายของเรา:\n" . session('invitation_link') . "\n\nขอบคุณครับ";
+            @endphp
             <div class="invitation-link-box">
                 <div style="font-weight: 600; color: var(--success); display: flex; align-items: center; gap: 6px; font-size: 14px;">
-                    <span>✓ สร้างลิงก์คำเชิญสำหรับ {{ session('invited_email') }} สำเร็จ!</span>
+                    <span>✓ สร้างลิงก์คำเชิญสำหรับ {{ session('invited_email') }} ในนาม 🏢 {{ $orgName }} สำเร็จ!</span>
                 </div>
                 <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">
                     ส่งลิงก์ด้านล่างนี้ให้ผู้รับเชิญเพื่อกรอกรหัสผ่านและสร้างบัญชีภายใต้หน่วยงานของท่าน:
                 </p>
                 <div class="invitation-url">
                     <span id="target-invite-link">{{ session('invitation_link') }}</span>
-                    <button class="btn-copy" onclick="copyInvitationLink()">คัดลอกลิงก์</button>
+                    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                        <button class="btn-copy" onclick="copyInvitationLink()">คัดลอกลิงก์</button>
+                        <a href="mailto:{{ session('invited_email') }}?subject={{ rawurlencode($mailSubject) }}&body={{ rawurlencode($mailBody) }}" style="background: var(--primary); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 11px; font-weight: 500; text-decoration: none; display: flex; align-items: center; transition: all 0.3s ease;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            ส่งอีเมล
+                        </a>
+                    </div>
                 </div>
             </div>
         @endif

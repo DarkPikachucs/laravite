@@ -103,14 +103,19 @@ class Phy70AuthController extends Controller
     public function manageUsers()
     {
         $currentUser = $this->guard()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
+        if (!$currentUser || !in_array($currentUser->role, ['admin', 'superadmin'])) {
             abort(403, 'เฉพาะผู้ดูแลระบบของหน่วยงานเท่านั้นที่เข้าถึงหน้านี้ได้');
         }
 
-        $users = Phy70User::where('organization_id', $currentUser->organization_id)->get();
-        $invitations = Phy70Invitation::where('organization_id', $currentUser->organization_id)
-            ->where('used', false)
-            ->get();
+        if ($currentUser->role === 'superadmin') {
+            $users = Phy70User::all();
+            $invitations = Phy70Invitation::where('used', false)->get();
+        } else {
+            $users = Phy70User::where('organization_id', $currentUser->organization_id)->get();
+            $invitations = Phy70Invitation::where('organization_id', $currentUser->organization_id)
+                ->where('used', false)
+                ->get();
+        }
 
         return view('phy70::auth.users', compact('users', 'invitations'));
     }
@@ -118,7 +123,7 @@ class Phy70AuthController extends Controller
     public function inviteUser(Request $request)
     {
         $currentUser = $this->guard()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
+        if (!$currentUser || !in_array($currentUser->role, ['admin', 'superadmin'])) {
             abort(403);
         }
 
@@ -199,11 +204,15 @@ class Phy70AuthController extends Controller
     public function resetPassword(Request $request, $id)
     {
         $currentUser = $this->guard()->user();
-        if (!$currentUser || $currentUser->role !== 'admin') {
+        if (!$currentUser || !in_array($currentUser->role, ['admin', 'superadmin'])) {
             abort(403);
         }
 
-        $targetUser = Phy70User::where('organization_id', $currentUser->organization_id)->findOrFail($id);
+        $query = Phy70User::query();
+        if ($currentUser->role !== 'superadmin') {
+            $query->where('organization_id', $currentUser->organization_id);
+        }
+        $targetUser = $query->findOrFail($id);
 
         $request->validate([
             'password' => 'required|string|min:6|confirmed',

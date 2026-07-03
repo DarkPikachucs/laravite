@@ -437,7 +437,7 @@
 
   <div class="form-container">
     <header class="header">
-      <h2 class="title">จัดทำข้อเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2570</h2>
+      <h2 class="title">{{ isset($proposal) ? 'แก้ไขข้อเสนอโครงการ' : 'จัดทำข้อเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2570' }}</h2>
       <a href="/app/phy70" class="btn-secondary">ยกเลิก</a>
     </header>
 
@@ -454,8 +454,11 @@
     @endif
 
     <div class="glass-card">
-      <form action="{{ route('phy70.proposal.store') }}" method="POST" id="proposal-form" enctype="multipart/form-data">
+      <form action="{{ isset($proposal) ? route('phy70.superadmin.proposal.update', $proposal->id) : route('phy70.proposal.store') }}" method="POST" id="proposal-form" enctype="multipart/form-data">
         @csrf
+        @if(isset($proposal))
+            @method('PUT')
+        @endif
 
         <!-- ================== SECTION 1 ================== -->
         <div class="form-section" id="section-2">
@@ -469,10 +472,10 @@
           </div>
 
           <!-- Hidden inputs for validation & database submission -->
-          <input type="hidden" id="province_issue" name="province_issue" value="{{ old('province_issue') }}" required>
-          <input type="hidden" id="development_guideline" name="development_guideline" value="{{ old('development_guideline') }}" required>
-          <input type="hidden" id="main_plan" name="main_plan" value="{{ old('main_plan') }}" required>
-          <input type="hidden" id="plan" name="plan" value="{{ old('plan') }}" required>
+          <input type="hidden" id="province_issue" name="province_issue" value="{{ old('province_issue', $proposal->province_issue ?? '') }}" required>
+          <input type="hidden" id="development_guideline" name="development_guideline" value="{{ old('development_guideline', $proposal->development_guideline ?? '') }}" required>
+          <input type="hidden" id="main_plan" name="main_plan" value="{{ old('main_plan', $proposal->main_plan ?? '') }}" required>
+          <input type="hidden" id="plan" name="plan" value="{{ old('plan', $proposal->plan ?? '') }}" required>
 
           <div class="form-group">
             <label class="form-label">ข้อมูลเป้าหมายและแผนความสอดคล้องระดับจังหวัดที่เลือก <span style="color: var(--danger);">*</span></label>
@@ -541,13 +544,13 @@
           <div class="form-group">
             <label class="form-label" for="project_name">ชื่อโครงการ <span style="color: var(--danger);">*</span></label>
             <input type="text" id="project_name" name="project_name" class="form-control"
-              placeholder="กรุณาระบุชื่อโครงการเต็ม" value="{{ old('project_name') }}" required>
+              placeholder="กรุณาระบุชื่อโครงการเต็ม" value="{{ old('project_name', $proposal->project_name ?? '') }}" required>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="main_activity">กิจกรรมหลัก <span style="color: var(--danger);">*</span></label>
             <textarea id="main_activity" name="main_activity" class="form-control"
-              placeholder="ระบุรายละเอียดกระบวนงานหรือกิจกรรมหลักของโครงการ" required>{{ old('main_activity') }}</textarea>
+              placeholder="ระบุรายละเอียดกระบวนงานหรือกิจกรรมหลักของโครงการ" required>{{ old('main_activity', $proposal->main_activity ?? '') }}</textarea>
           </div>
 
           <div class="grid-2-col">
@@ -561,7 +564,7 @@
             <div class="form-group">
               <label class="form-label" for="responsible_person">ผู้รับผิดชอบ <span style="color: var(--danger);">*</span></label>
               <input type="text" id="responsible_person" name="responsible_person" class="form-control"
-                placeholder="ชื่อ นามสกุล" value="{{ old('responsible_person', auth('phy70')->user()->name) }}" required>
+                placeholder="ชื่อ นามสกุล" value="{{ old('responsible_person', $proposal->responsible_person ?? auth('phy70')->user()->name) }}" required>
             </div>
           </div>
 
@@ -569,13 +572,13 @@
             <div class="form-group">
               <label class="form-label" for="position">ตำแหน่ง <span style="color: var(--danger);">*</span></label>
               <input type="text" id="position" name="position" class="form-control" placeholder="ระบุตำแหน่งสายงาน"
-                value="{{ old('position') }}" required>
+                value="{{ old('position', $proposal->position ?? '') }}" required>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="phone_number">หมายเลขโทรศัพท์ <span style="color: var(--danger);">*</span></label>
               <input type="text" id="phone_number" name="phone_number" class="form-control"
-                placeholder="เช่น 0891234567" value="{{ old('phone_number', auth('phy70')->user()->phone_number) }}" required>
+                placeholder="เช่น 0891234567" value="{{ old('phone_number', $proposal->phone_number ?? auth('phy70')->user()->phone_number) }}" required>
             </div>
           </div>
 
@@ -625,9 +628,12 @@
         </div>
 
         <!-- Submit Button Row -->
-        <div style="text-align: right; margin-top: 32px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 24px;">
-          <button type="submit" class="btn-action" style="font-size: 15px; padding: 14px 28px;">
-            ✓ ส่งข้อเสนอโครงการ
+        <div style="text-align: right; margin-top: 32px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="submit" name="status" value="draft" class="btn-action" style="background: rgba(255,255,255,0.1); font-size: 15px; padding: 14px 28px; box-shadow: none;" formnovalidate>
+            💾 บันทึกร่าง (Save Draft)
+          </button>
+          <button type="submit" name="status" value="{{ isset($proposal) ? $proposal->status : 'submitted' }}" class="btn-action" style="font-size: 15px; padding: 14px 28px;">
+            ✓ {{ isset($proposal) ? 'บันทึกการแก้ไข' : 'ส่งข้อเสนอโครงการ' }}
           </button>
         </div>
       </form>
@@ -885,10 +891,10 @@
 
     // Restore old inputs if validation failed
     const oldInput = {
-        province_issue: @json(old('province_issue')),
-        development_guideline: @json(old('development_guideline')),
-        main_plan: @json(old('main_plan')),
-        plan: @json(old('plan')),
+        province_issue: @json(old('province_issue', $proposal->province_issue ?? '')),
+        development_guideline: @json(old('development_guideline', $proposal->development_guideline ?? '')),
+        main_plan: @json(old('main_plan', $proposal->main_plan ?? '')),
+        plan: @json(old('plan', $proposal->plan ?? '')),
     };
     
     if (oldInput.province_issue && oldInput.development_guideline && oldInput.main_plan && oldInput.plan) {
@@ -964,9 +970,9 @@
     populateDistricts(provSelect.value);
 
     // Restore old target area inputs if validation failed
-    const oldProvince = @json(old('target_province', 'เพชรบูรณ์'));
-    const oldDistrict = @json(old('target_district'));
-    const oldSubdistrict = @json(old('target_subdistrict'));
+    const oldProvince = @json(old('target_province', $proposal->target_province ?? 'เพชรบูรณ์'));
+    const oldDistrict = @json(old('target_district', $proposal->target_district ?? ''));
+    const oldSubdistrict = @json(old('target_subdistrict', $proposal->target_subdistrict ?? ''));
 
     if (oldProvince) {
         provSelect.value = oldProvince;
@@ -985,6 +991,11 @@
     // --- Submit Form Validation Handler ---
     const form = document.getElementById('proposal-form');
     form.addEventListener('submit', function(event) {
+        // Bypass validation if saving as draft
+        if (event.submitter && event.submitter.value === 'draft') {
+            return;
+        }
+
         const requiredFields = form.querySelectorAll('[required]');
         let allValid = true;
         let firstInvalidField = null;
@@ -1182,7 +1193,7 @@
     }
 
     // Restore old activities if they exist from validation redirect
-    const oldActivities = @json(old('activities'));
+    const oldActivities = @json(old('activities', $proposal->activities ?? []));
     if (oldActivities && Array.isArray(oldActivities) && oldActivities.length > 0) {
         oldActivities.forEach(act => {
             addActivity(act);
