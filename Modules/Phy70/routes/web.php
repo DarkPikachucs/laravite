@@ -6,7 +6,10 @@ use Modules\Phy70\Http\Controllers\Phy70AuthController;
 
 Route::prefix('app/phy70')->group(function () {
     Route::get('/', [Phy70Controller::class, 'index'])->name('phy70.index');
-    
+
+    // Executive dashboard (summary / analytics overview)
+    Route::get('/dashboard', [Phy70Controller::class, 'dashboard'])->name('phy70.dashboard');
+
     // Authentication
     Route::get('/login', [Phy70AuthController::class, 'showLogin'])->name('phy70.login');
     Route::post('/login', [Phy70AuthController::class, 'login']);
