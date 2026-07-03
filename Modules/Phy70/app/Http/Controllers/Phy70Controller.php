@@ -259,9 +259,22 @@ class Phy70Controller extends Controller
             'สำนักงานการท่องเที่ยวและกีฬาจังหวัดเพชรบูรณ์',
             'สำนักงานพัฒนาสังคมและความมั่นคงของมนุษย์จังหวัด',
         ];
+        // พื้นที่เป้าหมายระดับตำบล (คงชื่ออำเภอในวงเล็บเพื่อไม่ให้ชื่อตำบลซ้ำกัน)
         $areas = [
-            'อำเภอเมืองเพชรบูรณ์', 'อำเภอหล่มสัก', 'อำเภอหล่มเก่า',
-            'อำเภอวิเชียรบุรี', 'อำเภอชนแดน', 'อำเภอศรีเทพ', 'อำเภอบึงสามพัน',
+            'ต.ในเมือง (อ.เมืองเพชรบูรณ์)',   // 0
+            'ต.ท่าพล (อ.เมืองเพชรบูรณ์)',     // 1
+            'ต.วังชมภู (อ.เมืองเพชรบูรณ์)',   // 2
+            'ต.หล่มสัก (อ.หล่มสัก)',          // 3
+            'ต.น้ำก้อ (อ.หล่มสัก)',           // 4
+            'ต.หล่มเก่า (อ.หล่มเก่า)',        // 5
+            'ต.วังบาล (อ.หล่มเก่า)',          // 6
+            'ต.นาซำ (อ.หล่มเก่า)',            // 7
+            'ต.ท่าโรง (อ.วิเชียรบุรี)',       // 8
+            'ต.พุเตย (อ.วิเชียรบุรี)',        // 9
+            'ต.ชนแดน (อ.ชนแดน)',             // 10
+            'ต.ดงขุย (อ.ชนแดน)',             // 11
+            'ต.ศรีเทพ (อ.ศรีเทพ)',           // 12
+            'ต.ซับสมอทอด (อ.บึงสามพัน)',      // 13
         ];
         $groups = ['ประชาชนทั่วไป', 'ผู้สูงอายุ', 'เด็กและเยาวชน', 'วัยทำงาน', 'กลุ่มเปราะบาง'];
 
@@ -278,8 +291,8 @@ class Phy70Controller extends Controller
                 'outcome'      => 'ประชาชนกลุ่มเป้าหมายมีกิจกรรมทางกายเพิ่มขึ้นเฉลี่ยร้อยละ 18',
                 'details' => [
                     ['activity_id' => 'AC-001-01', 'guideline' => $guidelines[0], 'target_area' => $areas[0], 'target_group' => $groups[0], 'activity' => 'จัดกิจกรรมเดิน-วิ่งการกุศลประจำเดือน', 'budget' => 350000, 'responsible_person' => 'นายสมชาย ใจดี', 'responsible_agency' => $agencies[0], 'related_agency' => 'เทศบาลเมืองเพชรบูรณ์'],
-                    ['activity_id' => 'AC-001-02', 'guideline' => $guidelines[1], 'target_area' => $areas[0], 'target_group' => $groups[3], 'activity' => 'ปรับปรุงเส้นทางสุขภาพริมแม่น้ำป่าสัก', 'budget' => 780000, 'responsible_person' => 'นางสาวมาลี งามวงศ์', 'responsible_agency' => $agencies[2], 'related_agency' => 'สำนักงานโยธาธิการและผังเมือง'],
-                    ['activity_id' => 'AC-001-03', 'guideline' => $guidelines[2], 'target_area' => $areas[4], 'target_group' => $groups[0], 'activity' => 'อบรมแกนนำสุขภาพชุมชน', 'budget' => 220000, 'responsible_person' => 'นายวิชัย พัฒนา', 'responsible_agency' => $agencies[0], 'related_agency' => 'อสม. ตำบล'],
+                    ['activity_id' => 'AC-001-02', 'guideline' => $guidelines[1], 'target_area' => $areas[1], 'target_group' => $groups[3], 'activity' => 'ปรับปรุงเส้นทางสุขภาพริมแม่น้ำป่าสัก', 'budget' => 780000, 'responsible_person' => 'นางสาวมาลี งามวงศ์', 'responsible_agency' => $agencies[2], 'related_agency' => 'สำนักงานโยธาธิการและผังเมือง'],
+                    ['activity_id' => 'AC-001-03', 'guideline' => $guidelines[2], 'target_area' => $areas[10], 'target_group' => $groups[0], 'activity' => 'อบรมแกนนำสุขภาพชุมชน', 'budget' => 220000, 'responsible_person' => 'นายวิชัย พัฒนา', 'responsible_agency' => $agencies[0], 'related_agency' => 'อสม. ตำบล'],
                 ],
             ],
             [
@@ -293,8 +306,8 @@ class Phy70Controller extends Controller
                 'output'       => 'ลานกีฬาชุมชนพร้อมอุปกรณ์ 4 แห่ง',
                 'outcome'      => 'ประชาชนเข้าถึงพื้นที่ออกกำลังกายเพิ่มขึ้นกว่า 8,000 คน/ปี',
                 'details' => [
-                    ['activity_id' => 'AC-002-01', 'guideline' => $guidelines[1], 'target_area' => $areas[1], 'target_group' => $groups[0], 'activity' => 'ก่อสร้างลานกีฬาอเนกประสงค์', 'budget' => 1250000, 'responsible_person' => 'นายอนุชา มั่นคง', 'responsible_agency' => $agencies[1], 'related_agency' => 'องค์การบริหารส่วนตำบล'],
-                    ['activity_id' => 'AC-002-02', 'guideline' => $guidelines[1], 'target_area' => $areas[2], 'target_group' => $groups[2], 'activity' => 'ติดตั้งเครื่องออกกำลังกายกลางแจ้ง', 'budget' => 640000, 'responsible_person' => 'นางสุดา แสงทอง', 'responsible_agency' => $agencies[1], 'related_agency' => 'เทศบาลตำบลหล่มเก่า'],
+                    ['activity_id' => 'AC-002-01', 'guideline' => $guidelines[1], 'target_area' => $areas[3], 'target_group' => $groups[0], 'activity' => 'ก่อสร้างลานกีฬาอเนกประสงค์', 'budget' => 1250000, 'responsible_person' => 'นายอนุชา มั่นคง', 'responsible_agency' => $agencies[1], 'related_agency' => 'องค์การบริหารส่วนตำบล'],
+                    ['activity_id' => 'AC-002-02', 'guideline' => $guidelines[1], 'target_area' => $areas[5], 'target_group' => $groups[2], 'activity' => 'ติดตั้งเครื่องออกกำลังกายกลางแจ้ง', 'budget' => 640000, 'responsible_person' => 'นางสุดา แสงทอง', 'responsible_agency' => $agencies[1], 'related_agency' => 'เทศบาลตำบลหล่มเก่า'],
                 ],
             ],
             [
@@ -308,8 +321,8 @@ class Phy70Controller extends Controller
                 'output'       => 'เส้นทางสุขภาพระยะทางรวม 25 กิโลเมตร',
                 'outcome'      => 'นักท่องเที่ยวเชิงสุขภาพเพิ่มขึ้นร้อยละ 12',
                 'details' => [
-                    ['activity_id' => 'AC-003-01', 'guideline' => $guidelines[1], 'target_area' => $areas[2], 'target_group' => $groups[3], 'activity' => 'จัดทำเส้นทางปั่นจักรยานเชิงสุขภาพ', 'budget' => 1580000, 'responsible_person' => 'นายกิตติ ท่องเที่ยว', 'responsible_agency' => $agencies[3], 'related_agency' => 'การท่องเที่ยวแห่งประเทศไทย'],
-                    ['activity_id' => 'AC-003-02', 'guideline' => $guidelines[2], 'target_area' => $areas[2], 'target_group' => $groups[0], 'activity' => 'อบรมมัคคุเทศก์สุขภาพชุมชน', 'budget' => 320000, 'responsible_person' => 'นางสาวปรีดา ภูเขียว', 'responsible_agency' => $agencies[3], 'related_agency' => 'วิทยาลัยชุมชนเพชรบูรณ์'],
+                    ['activity_id' => 'AC-003-01', 'guideline' => $guidelines[1], 'target_area' => $areas[6], 'target_group' => $groups[3], 'activity' => 'จัดทำเส้นทางปั่นจักรยานเชิงสุขภาพ', 'budget' => 1580000, 'responsible_person' => 'นายกิตติ ท่องเที่ยว', 'responsible_agency' => $agencies[3], 'related_agency' => 'การท่องเที่ยวแห่งประเทศไทย'],
+                    ['activity_id' => 'AC-003-02', 'guideline' => $guidelines[2], 'target_area' => $areas[7], 'target_group' => $groups[0], 'activity' => 'อบรมมัคคุเทศก์สุขภาพชุมชน', 'budget' => 320000, 'responsible_person' => 'นางสาวปรีดา ภูเขียว', 'responsible_agency' => $agencies[3], 'related_agency' => 'วิทยาลัยชุมชนเพชรบูรณ์'],
                 ],
             ],
             [
@@ -323,9 +336,9 @@ class Phy70Controller extends Controller
                 'output'       => 'โรงเรียนผู้สูงอายุ 10 แห่ง มีหลักสูตรกิจกรรมทางกาย',
                 'outcome'      => 'ผู้สูงอายุมีสมรรถภาพทางกายดีขึ้นร้อยละ 22',
                 'details' => [
-                    ['activity_id' => 'AC-004-01', 'guideline' => $guidelines[2], 'target_area' => $areas[3], 'target_group' => $groups[1], 'activity' => 'จัดหลักสูตรออกกำลังกายสำหรับผู้สูงอายุ', 'budget' => 480000, 'responsible_person' => 'นางพิมพ์ใจ สุขสันต์', 'responsible_agency' => $agencies[0], 'related_agency' => 'โรงพยาบาลส่งเสริมสุขภาพตำบล'],
-                    ['activity_id' => 'AC-004-02', 'guideline' => $guidelines[3], 'target_area' => $areas[5], 'target_group' => $groups[1], 'activity' => 'คัดกรองสุขภาพและประเมินภาวะหกล้ม', 'budget' => 260000, 'responsible_person' => 'นายแพทย์ธนา รักษ์ดี', 'responsible_agency' => $agencies[0], 'related_agency' => 'อสม. ตำบล'],
-                    ['activity_id' => 'AC-004-03', 'guideline' => $guidelines[2], 'target_area' => $areas[3], 'target_group' => $groups[4], 'activity' => 'เยี่ยมบ้านผู้สูงอายุติดเตียง', 'budget' => 180000, 'responsible_person' => 'นางสาวกนก ดูแล', 'responsible_agency' => $agencies[4], 'related_agency' => 'ศูนย์บริการคนพิการจังหวัด'],
+                    ['activity_id' => 'AC-004-01', 'guideline' => $guidelines[2], 'target_area' => $areas[8], 'target_group' => $groups[1], 'activity' => 'จัดหลักสูตรออกกำลังกายสำหรับผู้สูงอายุ', 'budget' => 480000, 'responsible_person' => 'นางพิมพ์ใจ สุขสันต์', 'responsible_agency' => $agencies[0], 'related_agency' => 'โรงพยาบาลส่งเสริมสุขภาพตำบล'],
+                    ['activity_id' => 'AC-004-02', 'guideline' => $guidelines[3], 'target_area' => $areas[12], 'target_group' => $groups[1], 'activity' => 'คัดกรองสุขภาพและประเมินภาวะหกล้ม', 'budget' => 260000, 'responsible_person' => 'นายแพทย์ธนา รักษ์ดี', 'responsible_agency' => $agencies[0], 'related_agency' => 'อสม. ตำบล'],
+                    ['activity_id' => 'AC-004-03', 'guideline' => $guidelines[2], 'target_area' => $areas[9], 'target_group' => $groups[4], 'activity' => 'เยี่ยมบ้านผู้สูงอายุติดเตียง', 'budget' => 180000, 'responsible_person' => 'นางสาวกนก ดูแล', 'responsible_agency' => $agencies[4], 'related_agency' => 'ศูนย์บริการคนพิการจังหวัด'],
                 ],
             ],
             [
@@ -339,8 +352,8 @@ class Phy70Controller extends Controller
                 'output'       => 'โรงเรียนนำร่อง 15 แห่ง จัดกิจกรรม Active Play',
                 'outcome'      => 'เด็กมีภาวะน้ำหนักเกินลดลงร้อยละ 9',
                 'details' => [
-                    ['activity_id' => 'AC-005-01', 'guideline' => $guidelines[0], 'target_area' => $areas[4], 'target_group' => $groups[2], 'activity' => 'จัดค่ายกีฬาและนันทนาการภาคฤดูร้อน', 'budget' => 420000, 'responsible_person' => 'นายพงศ์ เยาวชน', 'responsible_agency' => $agencies[1], 'related_agency' => 'สำนักงานเขตพื้นที่การศึกษา'],
-                    ['activity_id' => 'AC-005-02', 'guideline' => $guidelines[0], 'target_area' => $areas[6], 'target_group' => $groups[2], 'activity' => 'อบรมครูผู้นำกิจกรรมทางกายในโรงเรียน', 'budget' => 190000, 'responsible_person' => 'นางสาวรัตนา ครูดี', 'responsible_agency' => $agencies[1], 'related_agency' => 'มหาวิทยาลัยราชภัฏเพชรบูรณ์'],
+                    ['activity_id' => 'AC-005-01', 'guideline' => $guidelines[0], 'target_area' => $areas[11], 'target_group' => $groups[2], 'activity' => 'จัดค่ายกีฬาและนันทนาการภาคฤดูร้อน', 'budget' => 420000, 'responsible_person' => 'นายพงศ์ เยาวชน', 'responsible_agency' => $agencies[1], 'related_agency' => 'สำนักงานเขตพื้นที่การศึกษา'],
+                    ['activity_id' => 'AC-005-02', 'guideline' => $guidelines[0], 'target_area' => $areas[13], 'target_group' => $groups[2], 'activity' => 'อบรมครูผู้นำกิจกรรมทางกายในโรงเรียน', 'budget' => 190000, 'responsible_person' => 'นางสาวรัตนา ครูดี', 'responsible_agency' => $agencies[1], 'related_agency' => 'มหาวิทยาลัยราชภัฏเพชรบูรณ์'],
                 ],
             ],
             [
@@ -354,8 +367,8 @@ class Phy70Controller extends Controller
                 'output'       => 'หน่วยบริการปฐมภูมิ 20 แห่ง มีคลินิกกิจกรรมทางกาย',
                 'outcome'      => 'ผู้ป่วย NCDs เข้าถึงคำแนะนำกิจกรรมทางกายเพิ่มขึ้นร้อยละ 30',
                 'details' => [
-                    ['activity_id' => 'AC-006-01', 'guideline' => $guidelines[3], 'target_area' => $areas[1], 'target_group' => $groups[4], 'activity' => 'พัฒนาคลินิกกิจกรรมทางกายในรพ.สต.', 'budget' => 560000, 'responsible_person' => 'นายแพทย์สุริยา แสงไทย', 'responsible_agency' => $agencies[0], 'related_agency' => 'สปสช. เขต'],
-                    ['activity_id' => 'AC-006-02', 'guideline' => $guidelines[2], 'target_area' => $areas[0], 'target_group' => $groups[3], 'activity' => 'พัฒนาแอปติดตามกิจกรรมทางกายชุมชน', 'budget' => 380000, 'responsible_person' => 'นายเทคโน ดิจิทัล', 'responsible_agency' => $agencies[0], 'related_agency' => 'สำนักงานสถิติจังหวัด'],
+                    ['activity_id' => 'AC-006-01', 'guideline' => $guidelines[3], 'target_area' => $areas[4], 'target_group' => $groups[4], 'activity' => 'พัฒนาคลินิกกิจกรรมทางกายในรพ.สต.', 'budget' => 560000, 'responsible_person' => 'นายแพทย์สุริยา แสงไทย', 'responsible_agency' => $agencies[0], 'related_agency' => 'สปสช. เขต'],
+                    ['activity_id' => 'AC-006-02', 'guideline' => $guidelines[2], 'target_area' => $areas[2], 'target_group' => $groups[3], 'activity' => 'พัฒนาแอปติดตามกิจกรรมทางกายชุมชน', 'budget' => 380000, 'responsible_person' => 'นายเทคโน ดิจิทัล', 'responsible_agency' => $agencies[0], 'related_agency' => 'สำนักงานสถิติจังหวัด'],
                 ],
             ],
         ];
