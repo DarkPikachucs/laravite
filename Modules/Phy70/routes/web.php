@@ -14,6 +14,9 @@ Route::prefix('app/phy70')->group(function () {
     // Linkage — ความเชื่อมโยง/ทับซ้อนของประเด็นข้ามหน่วยงาน
     Route::get('/linkage', [Phy70Controller::class, 'linkage'])->name('phy70.linkage');
 
+    // Scorecard — เกณฑ์ประเมินคุณภาพข้อเสนอโครงการ
+    Route::get('/scorecard', [Phy70Controller::class, 'scorecard'])->name('phy70.scorecard');
+
     // Authentication
     Route::get('/login', [Phy70AuthController::class, 'showLogin'])->name('phy70.login');
     Route::post('/login', [Phy70AuthController::class, 'login']);
