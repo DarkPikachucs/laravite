@@ -260,6 +260,184 @@ class Phy70Controller extends Controller
     }
 
     /**
+     * Linkage view — วิเคราะห์ความเชื่อมโยง/ทับซ้อนของ "ประเด็นการพัฒนา"
+     * ข้ามหน่วยงาน: หน่วยงานใดบ้างที่เสนอโครงการอยู่ในประเด็นเดียวกัน
+     * (ทับซ้อนข้ามหน่วยงาน) และหน่วยงานใดเสนอซ้ำหลายโครงการในประเด็นเดียวกัน.
+     * ใช้ mock data ชุดเดียวกับ dashboard เพื่อให้ข้อมูลสอดคล้องกัน.
+     */
+    public function linkage()
+    {
+        $projects = collect($this->mockProjects());
+
+        // แต่ละโครงการ = 1 ข้อเสนอ (ประเด็น + หน่วยงานดำเนินการ + งบรวม)
+        $proposals = $projects->map(fn ($p) => [
+            'project_id'   => $p['project_id'],
+            'project_name' => $p['project_name'],
+            'issue'        => $p['province_issue'],
+            'guideline'    => $p['province_guideline'],
+            'agency'       => $p['operating_agency'],
+            'budget'       => collect($p['details'])->sum('budget'),
+        ])->values();
+
+        $issueList  = $proposals->pluck('issue')->unique()->values();
+        $agencyList = $proposals->pluck('agency')->unique()->sort()->values();
+
+        // จัดกลุ่มตามประเด็น → ภายในประเด็นจัดกลุ่มตามหน่วยงาน
+        $byIssue = $proposals->groupBy('issue')->map(function ($group, $issue) {
+            $agencies = $group->groupBy('agency');
+            return [
+                'issue'          => $issue,
+                'proposals'      => $group->values(),
+                'agencies'       => $agencies,
+                'agency_count'   => $agencies->count(),
+                'proposal_count' => $group->count(),
+                'total_budget'   => $group->sum('budget'),
+                'cross_overlap'  => $agencies->count() > 1,               // ทับซ้อนข้ามหน่วยงาน
+                'dup_agencies'   => $agencies->filter(fn ($ps) => $ps->count() > 1)->keys()->values(), // ซ้ำในหน่วยงานเดียว
+            ];
+        })->sortByDesc('proposal_count')->values();
+
+        $overlapIssues = $byIssue->where('cross_overlap', true)->values();
+
+        // คู่หน่วยงานที่เชื่อมโยงกันผ่านประเด็นเดียวกัน
+        $pairs = collect();
+        foreach ($byIssue as $row) {
+            $ags = $row['agencies']->keys()->values();
+            for ($i = 0; $i < $ags->count(); $i++) {
+                for ($j = $i + 1; $j < $ags->count(); $j++) {
+                    $pairs->push(['a' => $ags[$i], 'b' => $ags[$j], 'issue' => $row['issue']]);
+                }
+            }
+        }
+
+        // เมทริกซ์ หน่วยงาน × ประเด็น (จำนวนข้อเสนอในแต่ละช่อง)
+        $matrix = [];
+        foreach ($agencyList as $ag) {
+            foreach ($issueList as $is) {
+                $matrix[$ag][$is] = $proposals->where('agency', $ag)->where('issue', $is)->count();
+            }
+        }
+
+        $kpi = [
+            'issues'         => $issueList->count(),
+            'agencies'       => $agencyList->count(),
+            'proposals'      => $proposals->count(),
+            'overlap_issues' => $overlapIssues->count(),
+            'pairs'          => $pairs->count(),
+        ];
+
+        return view('phy70::linkage', compact(
+            'proposals', 'issueList', 'agencyList',
+            'byIssue', 'overlapIssues', 'pairs', 'matrix', 'kpi'
+        ));
+    }
+
+    /**
+     * Scorecard — ประเมินคุณภาพข้อเสนอโครงการอัตโนมัติจาก 5 เกณฑ์ถ่วงน้ำหนัก
+     * แล้วจัดเกรด (A–D) และลำดับความสำคัญ. คะแนนคำนวณจากข้อมูลจริงในข้อเสนอ
+     * (ความสอดคล้อง, ความคุ้มค่างบ, ความไม่ซ้ำซ้อน, ความชัดเจนผลลัพธ์, ความพร้อม).
+     */
+    public function scorecard()
+    {
+        $projects = collect($this->mockProjects());
+
+        // สัญญาณความซ้ำซ้อน (ใช้ตรรกะเดียวกับหน้า linkage)
+        $byIssueAgency = $projects->groupBy('province_issue')->map(fn ($g) => [
+            'agency_count' => $g->pluck('operating_agency')->unique()->count(),
+            'agency_props' => $g->groupBy('operating_agency')->map->count(),
+        ]);
+
+        // เมตริกดิบต่อโครงการ
+        $base = $projects->map(function ($p) {
+            $budget = collect($p['details'])->sum('budget');
+            $acts   = count($p['details']);
+            return [
+                'p'                 => $p,
+                'budget'            => $budget,
+                'acts'              => $acts,
+                'areas'             => collect($p['details'])->pluck('target_area')->unique()->count(),
+                'groups'            => collect($p['details'])->pluck('target_group')->unique()->count(),
+                'perAct'            => $acts ? $budget / $acts : $budget,
+                'hasNumericOutcome' => (bool) preg_match('/[0-9๐-๙]/u', $p['outcome'] ?? ''),
+            ];
+        });
+
+        $minPerAct = $base->min('perAct') ?: 1;
+        $maxPerAct = $base->max('perAct') ?: 1;
+        $maxAreas  = $base->max('areas') ?: 1;
+        $maxGroups = $base->max('groups') ?: 1;
+        $spanPerAct = ($maxPerAct - $minPerAct) ?: 1;
+
+        // นิยามเกณฑ์ + น้ำหนัก (รวม 100%)
+        $criteria = [
+            ['key' => 'align',   'name' => 'ความสอดคล้องเชิงยุทธศาสตร์', 'weight' => 25, 'color' => '#6366f1'],
+            ['key' => 'value',   'name' => 'ความคุ้มค่างบประมาณ',        'weight' => 20, 'color' => '#059669'],
+            ['key' => 'dup',     'name' => 'ความไม่ซ้ำซ้อน/บูรณาการ',    'weight' => 20, 'color' => '#dc2626'],
+            ['key' => 'outcome', 'name' => 'ความชัดเจนของผลลัพธ์',       'weight' => 20, 'color' => '#0891b2'],
+            ['key' => 'ready',   'name' => 'ความพร้อม/ครอบคลุมพื้นที่',   'weight' => 15, 'color' => '#d97706'],
+        ];
+
+        $rows = $base->map(function ($b) use ($byIssueAgency, $minPerAct, $spanPerAct, $maxAreas, $maxGroups) {
+            $p = $b['p'];
+
+            // 1) ความสอดคล้องเชิงยุทธศาสตร์ — มีองค์ประกอบครบหรือไม่
+            $align = 60
+                + (!empty($p['province_issue']) ? 10 : 0)
+                + (!empty($p['province_guideline']) ? 10 : 0)
+                + (!empty($p['output']) ? 10 : 0)
+                + (!empty($p['outcome']) ? 10 : 0);
+            $align = min(100, $align);
+
+            // 2) ความคุ้มค่างบประมาณ — งบต่อกิจกรรมยิ่งต่ำยิ่งคุ้ม (invert-normalize)
+            $value = round(100 - (($b['perAct'] - $minPerAct) / $spanPerAct) * 60);
+            $value = max(40, min(100, $value));
+
+            // 3) ความไม่ซ้ำซ้อน — หักคะแนนถ้าประเด็นทับซ้อนข้ามหน่วยงาน/ซ้ำในหน่วยงาน
+            $ia = $byIssueAgency[$p['province_issue']];
+            $overlap = $ia['agency_count'] > 1;
+            $dupInAgency = ($ia['agency_props'][$p['operating_agency']] ?? 1) > 1;
+            $dup = 100 - ($overlap ? 30 : 0) - ($dupInAgency ? 25 : 0);
+            $dup = max(30, $dup);
+
+            // 4) ความชัดเจนของผลลัพธ์ — มีตัวเลขเป้าหมาย + รายละเอียดเพียงพอ
+            $outcome = $b['hasNumericOutcome'] ? 90 : 65;
+            if (mb_strlen($p['outcome'] ?? '') > 40) $outcome = min(100, $outcome + 8);
+
+            // 5) ความพร้อม/ครอบคลุม — จำนวนพื้นที่ + กลุ่มเป้าหมายที่ครอบคลุม
+            $ready = round(50 + ($b['areas'] / $maxAreas) * 30 + ($b['groups'] / $maxGroups) * 20);
+            $ready = min(100, $ready);
+
+            $scores = compact('align', 'value', 'dup', 'outcome', 'ready');
+            $total  = round($align * 0.25 + $value * 0.20 + $dup * 0.20 + $outcome * 0.20 + $ready * 0.15);
+            $grade  = $total >= 85 ? 'A' : ($total >= 75 ? 'B' : ($total >= 65 ? 'C' : 'D'));
+
+            return [
+                'project_id'   => $p['project_id'],
+                'project_name' => $p['project_name'],
+                'agency'       => $p['operating_agency'],
+                'issue'        => $p['province_issue'],
+                'budget'       => $b['budget'],
+                'scores'       => $scores,
+                'total'        => $total,
+                'grade'        => $grade,
+                'flags'        => ['overlap' => $overlap, 'dup' => $dupInAgency],
+            ];
+        })->sortByDesc('total')->values();
+
+        $gradeDist = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0];
+        foreach ($rows as $r) { $gradeDist[$r['grade']]++; }
+
+        $kpi = [
+            'count'       => $rows->count(),
+            'avg'         => $rows->count() ? round($rows->avg('total')) : 0,
+            'gradeA'      => $gradeDist['A'],
+            'needImprove' => $gradeDist['C'] + $gradeDist['D'],
+        ];
+
+        return view('phy70::scorecard', compact('rows', 'criteria', 'kpi', 'gradeDist'));
+    }
+
+    /**
      * Hard-coded mock dataset mirroring the intended `project` and
      * `project_detail` tables. Replace with real queries once the schema
      * is in place.

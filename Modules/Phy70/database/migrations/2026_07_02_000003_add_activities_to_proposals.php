@@ -11,7 +11,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('phy70_proposals', function (Blueprint $table) {
-            $table->text('activities')->nullable();
+            if (! Schema::hasColumn('phy70_proposals', 'activities')) {
+                $table->text('activities')->nullable();
+            }
         });
     }
 

@@ -20,6 +20,12 @@
         $areaPalette = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#3b82f6'];
         $maxAreaBudget = $budgetByArea->max() ?: 1;
 
+        // ---- Guideline color map (แนวทางการพัฒนา) -------------------------
+        $guidelinePalette = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#3b82f6'];
+        $guidelineList = $details->pluck('guideline')->unique()->values();
+        $guidelineColors = [];
+        foreach ($guidelineList as $gi => $g) { $guidelineColors[$g] = $guidelinePalette[$gi % count($guidelinePalette)]; }
+
         // ---- Approx lat/lng of Phetchabun sub-districts / ตำบล (real map) --
         $areaCoords = [
             'ต.ในเมือง (อ.เมืองเพชรบูรณ์)'   => [16.4189, 101.1591],
@@ -37,19 +43,53 @@
             'ต.ศรีเทพ (อ.ศรีเทพ)'           => [15.4675, 101.1436],
             'ต.ซับสมอทอด (อ.บึงสามพัน)'      => [15.7936, 101.0508],
         ];
-        // Combine area aggregates + coords + color into a map-ready payload
+
+        // ---- Per-tambon aggregation with issue & guideline breakdown -------
+        // (แต่ละกิจกรรมมี target_area + guideline, ส่วน "ประเด็น" อยู่ที่โครงการ)
+        $tambonAgg = [];
+        foreach ($projects as $p) {
+            $issue = $p['province_issue'];
+            foreach ($p['details'] as $d) {
+                $t = $d['target_area'];
+                if (!isset($tambonAgg[$t])) {
+                    $tambonAgg[$t] = ['budget' => 0, 'acts' => 0, 'issues' => [], 'guides' => []];
+                }
+                $tambonAgg[$t]['budget'] += $d['budget'];
+                $tambonAgg[$t]['acts']   += 1;
+                $tambonAgg[$t]['issues'][$issue]        = ($tambonAgg[$t]['issues'][$issue] ?? 0) + $d['budget'];
+                $tambonAgg[$t]['guides'][$d['guideline']] = ($tambonAgg[$t]['guides'][$d['guideline']] ?? 0) + $d['budget'];
+            }
+        }
+
+        // Combine area aggregates + coords + colors into a map-ready payload
         $areaMapData = [];
-        foreach ($budgetByArea as $area => $budget) {
-            $ci = count($areaMapData) % count($areaPalette);
+        $ai = 0;
+        foreach ($tambonAgg as $area => $agg) {
+            // dominant issue / guideline (มากสุดตามงบ) + breakdown list พร้อมสี
+            arsort($agg['issues']);
+            arsort($agg['guides']);
+            $issueBreak = [];
+            foreach ($agg['issues'] as $is => $b) {
+                $issueBreak[] = ['name' => $is, 'budget' => $b, 'color' => ($issueMeta[$is]['color'] ?? $issueDefault['color'])];
+            }
+            $guideBreak = [];
+            foreach ($agg['guides'] as $g => $b) {
+                $guideBreak[] = ['name' => $g, 'budget' => $b, 'color' => ($guidelineColors[$g] ?? '#64748b')];
+            }
             $areaMapData[] = [
-                'name'    => $area,
-                'budget'  => $budget,
-                'acts'    => $activitiesByArea[$area] ?? 0,
-                'color'   => $areaPalette[$ci],
-                'lat'     => $areaCoords[$area][0] ?? 16.42,
-                'lng'     => $areaCoords[$area][1] ?? 101.15,
-                'pct'     => round($budget / $maxAreaBudget * 100),
+                'name'      => $area,
+                'budget'    => $agg['budget'],
+                'acts'      => $agg['acts'],
+                'color'     => $areaPalette[$ai % count($areaPalette)], // สีมุมมอง "ตำบล"
+                'lat'       => $areaCoords[$area][0] ?? 16.42,
+                'lng'       => $areaCoords[$area][1] ?? 101.15,
+                'pct'       => round($agg['budget'] / $maxAreaBudget * 100),
+                'issues'    => $issueBreak,
+                'guides'    => $guideBreak,
+                'domIssue'  => $issueBreak[0],
+                'domGuide'  => $guideBreak[0],
             ];
+            $ai++;
         }
 
         // ---- Inline SVG path library --------------------------------------
@@ -236,6 +276,33 @@
         .map-legend-item { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
         .map-legend-dot { border-radius: 50%; background: #6366f1; opacity: 0.55; flex-shrink: 0; }
 
+        /* Leaflet layer selector — ให้ใช้ฟอนต์เดียวกับหน้าเว็บ */
+        .leaflet-control-layers {
+            border: 1px solid var(--border) !important;
+            border-radius: 12px !important;
+            box-shadow: var(--shadow-card) !important;
+            padding: 8px 6px !important;
+            background: rgba(255,255,255,0.97) !important;
+            font-family: 'Outfit', 'IBM Plex Sans Thai', sans-serif !important;
+        }
+        .leaflet-control-layers-expanded { padding: 8px 8px !important; }
+        .leaflet-control-layers-list { margin: 0; }
+        .leaflet-control-layers-base label {
+            display: flex; align-items: center; gap: 8px; margin: 0;
+            padding: 6px 10px; border-radius: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 500; color: var(--text-main);
+            transition: background 0.15s ease;
+        }
+        .leaflet-control-layers-base label:hover { background: var(--primary-soft); }
+        .leaflet-control-layers-base label > span {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .leaflet-control-layers-selector {
+            width: 15px; height: 15px; margin: 0 !important;
+            accent-color: var(--primary); cursor: pointer; flex-shrink: 0;
+        }
+        .leaflet-control-layers-separator { margin: 6px 4px; border-top-color: var(--border); }
+
         /* Layer mapping list (ranked legend below the map) */
         .layer-map { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
         .layer-row {
@@ -322,6 +389,14 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     ข้อมูลจำลอง (Mockup)
                 </span>
+                <a href="{{ route('phy70.linkage') }}" class="btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    การเชื่อมโยง
+                </a>
+                <a href="{{ route('phy70.scorecard') }}" class="btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    ประเมินคุณภาพ
+                </a>
                 <a href="{{ route('phy70.index') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     กลับหน้าหลัก
@@ -443,11 +518,11 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['layers'] !!}</svg>
                 ข้อมูลพื้นที่ — Layer Mapping
             </h3>
-            <p class="section-sub">แผนที่จังหวัดเพชรบูรณ์ — ซูม/คลิกที่หมุดแต่ละตำบลเพื่อดูงบประมาณและจำนวนกิจกรรมที่ลงพื้นที่ (ขนาดวงกลม = งบประมาณ) · <span style="color: var(--success);">ข้อมูลพื้นที่เป้าหมายระดับตำบล</span></p>
+            <p class="section-sub">แผนที่จังหวัดเพชรบูรณ์ ระดับตำบล — เลือกมุมมอง (Layer) ที่มุมขวาบนของแผนที่: <b>ดูเป็นตำบล / ประเด็น / แนวทาง</b> · ขนาดวงกลม = งบประมาณ · คลิกหมุดเพื่อดูรายละเอียดแยกตามมุมมอง</p>
 
             <div class="area-map-wrap">
                 <div id="areaMap"></div>
-                <div class="map-legend">
+                <div class="map-legend" id="mapLegend">
                     <div class="map-legend-title">ขนาดวงกลม = งบประมาณ</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="width:10px;height:10px;"></span> งบน้อย</div>
                     <div class="map-legend-item"><span class="map-legend-dot" style="width:18px;height:18px;"></span> ปานกลาง</div>
@@ -610,7 +685,7 @@
     </div>
 
     <script>
-        // ---- Leaflet area map (ข้อมูลพื้นที่ — แผนที่จริง) ----
+        // ---- Leaflet area map (ข้อมูลพื้นที่ — เลือก layer: ตำบล/ประเด็น/แนวทาง) ----
         const areaData = @json($areaMapData);
         const bahtFmtMap = (v) => new Intl.NumberFormat('th-TH').format(v);
 
@@ -621,32 +696,87 @@
         }).addTo(areaMap);
 
         const maxBudget = Math.max(...areaData.map(a => a.budget), 1);
-        const bounds = [];
+        const bounds = areaData.map(a => [a.lat, a.lng]);
+
+        // header row of a popup (ชื่อตำบล + งบ + กิจกรรม)
+        const popHead = (a) =>
+            '<div class="map-pop-name">' + a.name + '</div>' +
+            '<div class="map-pop-row"><span>งบประมาณรวม</span><b>' + bahtFmtMap(a.budget) + ' บาท</b></div>' +
+            '<div class="map-pop-row"><span>จำนวนกิจกรรม</span><b>' + bahtFmtMap(a.acts) + ' กิจกรรม</b></div>';
+
+        // breakdown rows (แยกตามประเด็น/แนวทาง พร้อมจุดสี)
+        const popBreak = (items, title) => {
+            let h = '<div class="map-pop-row" style="margin-top:6px;font-weight:600;color:#1e293b;"><span>แยกตาม' + title + '</span><span></span></div>';
+            items.forEach(it => {
+                h += '<div class="map-pop-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + it.color + ';margin-right:6px;"></span>' + it.name + '</span><b>' + bahtFmtMap(it.budget) + '</b></div>';
+            });
+            return h;
+        };
+
+        const makeMarker = (a, color, popupHtml) => {
+            const r = 10 + (a.budget / maxBudget) * 20;   // radius 10 → 30 px by budget
+            const m = L.circleMarker([a.lat, a.lng], {
+                radius: r, color: color, weight: 2, fillColor: color, fillOpacity: 0.45
+            });
+            m.bindPopup(popupHtml);
+            m.bindTooltip(a.name, { direction: 'top', offset: [0, -r] });
+            return m;
+        };
+
+        // สร้าง 3 layer groups
+        const layerTambon = L.layerGroup();
+        const layerIssue  = L.layerGroup();
+        const layerGuide  = L.layerGroup();
+
         areaData.forEach(a => {
-            // radius scales 10 → 30 px by budget share
-            const r = 10 + (a.budget / maxBudget) * 20;
-            const marker = L.circleMarker([a.lat, a.lng], {
-                radius: r,
-                color: a.color,
-                weight: 2,
-                fillColor: a.color,
-                fillOpacity: 0.45
-            }).addTo(areaMap);
-            marker.bindPopup(
-                '<div class="map-pop-name">' + a.name + '</div>' +
-                '<div class="map-pop-row"><span>งบประมาณ</span><b>' + bahtFmtMap(a.budget) + ' บาท</b></div>' +
-                '<div class="map-pop-row"><span>จำนวนกิจกรรม</span><b>' + bahtFmtMap(a.acts) + ' กิจกรรม</b></div>' +
-                '<div class="map-pop-row"><span>สัดส่วนงบ</span><b>' + a.pct + '%</b></div>'
-            );
-            marker.bindTooltip(a.name, { direction: 'top', offset: [0, -r] });
-            bounds.push([a.lat, a.lng]);
+            layerTambon.addLayer(makeMarker(a, a.color,
+                popHead(a) + '<div class="map-pop-row"><span>สัดส่วนงบ</span><b>' + a.pct + '%</b></div>'));
+            layerIssue.addLayer(makeMarker(a, a.domIssue.color,
+                popHead(a) + popBreak(a.issues, 'ประเด็น')));
+            layerGuide.addLayer(makeMarker(a, a.domGuide.color,
+                popHead(a) + popBreak(a.guides, 'แนวทาง')));
         });
+
+        layerTambon.addTo(areaMap); // มุมมองเริ่มต้น
+
+        // ตัวเลือก layer (radio) มุมขวาบน
+        L.control.layers({
+            'ดูเป็นตำบล':   layerTambon,
+            'ดูเป็นประเด็น': layerIssue,
+            'ดูเป็นแนวทาง':  layerGuide,
+        }, null, { collapsed: false, position: 'topright' }).addTo(areaMap);
+
+        // ---- Dynamic legend ต่อ layer ----
+        const issueLegend = @json(collect($areaMapData)->flatMap->issues->unique('name')->values());
+        const guideLegend = @json(collect($areaMapData)->flatMap->guides->unique('name')->values());
+        const legendEl = document.getElementById('mapLegend');
+
+        const sizeLegend =
+            '<div class="map-legend-title">ขนาดวงกลม = งบประมาณ</div>' +
+            '<div class="map-legend-item"><span class="map-legend-dot" style="width:10px;height:10px;"></span> งบน้อย</div>' +
+            '<div class="map-legend-item"><span class="map-legend-dot" style="width:18px;height:18px;"></span> ปานกลาง</div>' +
+            '<div class="map-legend-item"><span class="map-legend-dot" style="width:26px;height:26px;"></span> งบสูง</div>';
+
+        const colorLegend = (title, items) => {
+            let h = '<div class="map-legend-title">' + title + '</div>';
+            items.forEach(it => {
+                h += '<div class="map-legend-item"><span class="map-legend-dot" style="width:12px;height:12px;opacity:1;background:' + it.color + ';"></span> ' + it.name + '</div>';
+            });
+            return h;
+        };
+
+        const setLegend = (name) => {
+            if (name === 'ดูเป็นประเด็น')      legendEl.innerHTML = colorLegend('สีตามประเด็นการพัฒนา', issueLegend);
+            else if (name === 'ดูเป็นแนวทาง')  legendEl.innerHTML = colorLegend('สีตามแนวทางการพัฒนา', guideLegend);
+            else                               legendEl.innerHTML = sizeLegend;
+        };
+        areaMap.on('baselayerchange', (e) => setLegend(e.name));
+
         if (bounds.length) {
             areaMap.fitBounds(bounds, { padding: [50, 50] });
         } else {
             areaMap.setView([16.42, 101.15], 9);
         }
-        // Ensure correct sizing after layout settles
         setTimeout(() => areaMap.invalidateSize(), 200);
 
         // ---- Chart.js global LIGHT theme ----
