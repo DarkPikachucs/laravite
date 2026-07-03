@@ -11,6 +11,9 @@ Route::prefix('app/phy70')->group(function () {
     // Executive dashboard (summary / analytics overview)
     Route::get('/dashboard', [Phy70Controller::class, 'dashboard'])->name('phy70.dashboard');
 
+    // Linkage — ความเชื่อมโยง/ทับซ้อนของประเด็นข้ามหน่วยงาน
+    Route::get('/linkage', [Phy70Controller::class, 'linkage'])->name('phy70.linkage');
+
     // Authentication
     Route::get('/login', [Phy70AuthController::class, 'showLogin'])->name('phy70.login');
     Route::post('/login', [Phy70AuthController::class, 'login']);

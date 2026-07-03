@@ -234,6 +234,79 @@ class Phy70Controller extends Controller
     }
 
     /**
+     * Linkage view — วิเคราะห์ความเชื่อมโยง/ทับซ้อนของ "ประเด็นการพัฒนา"
+     * ข้ามหน่วยงาน: หน่วยงานใดบ้างที่เสนอโครงการอยู่ในประเด็นเดียวกัน
+     * (ทับซ้อนข้ามหน่วยงาน) และหน่วยงานใดเสนอซ้ำหลายโครงการในประเด็นเดียวกัน.
+     * ใช้ mock data ชุดเดียวกับ dashboard เพื่อให้ข้อมูลสอดคล้องกัน.
+     */
+    public function linkage()
+    {
+        $projects = collect($this->mockProjects());
+
+        // แต่ละโครงการ = 1 ข้อเสนอ (ประเด็น + หน่วยงานดำเนินการ + งบรวม)
+        $proposals = $projects->map(fn ($p) => [
+            'project_id'   => $p['project_id'],
+            'project_name' => $p['project_name'],
+            'issue'        => $p['province_issue'],
+            'guideline'    => $p['province_guideline'],
+            'agency'       => $p['operating_agency'],
+            'budget'       => collect($p['details'])->sum('budget'),
+        ])->values();
+
+        $issueList  = $proposals->pluck('issue')->unique()->values();
+        $agencyList = $proposals->pluck('agency')->unique()->sort()->values();
+
+        // จัดกลุ่มตามประเด็น → ภายในประเด็นจัดกลุ่มตามหน่วยงาน
+        $byIssue = $proposals->groupBy('issue')->map(function ($group, $issue) {
+            $agencies = $group->groupBy('agency');
+            return [
+                'issue'          => $issue,
+                'proposals'      => $group->values(),
+                'agencies'       => $agencies,
+                'agency_count'   => $agencies->count(),
+                'proposal_count' => $group->count(),
+                'total_budget'   => $group->sum('budget'),
+                'cross_overlap'  => $agencies->count() > 1,               // ทับซ้อนข้ามหน่วยงาน
+                'dup_agencies'   => $agencies->filter(fn ($ps) => $ps->count() > 1)->keys()->values(), // ซ้ำในหน่วยงานเดียว
+            ];
+        })->sortByDesc('proposal_count')->values();
+
+        $overlapIssues = $byIssue->where('cross_overlap', true)->values();
+
+        // คู่หน่วยงานที่เชื่อมโยงกันผ่านประเด็นเดียวกัน
+        $pairs = collect();
+        foreach ($byIssue as $row) {
+            $ags = $row['agencies']->keys()->values();
+            for ($i = 0; $i < $ags->count(); $i++) {
+                for ($j = $i + 1; $j < $ags->count(); $j++) {
+                    $pairs->push(['a' => $ags[$i], 'b' => $ags[$j], 'issue' => $row['issue']]);
+                }
+            }
+        }
+
+        // เมทริกซ์ หน่วยงาน × ประเด็น (จำนวนข้อเสนอในแต่ละช่อง)
+        $matrix = [];
+        foreach ($agencyList as $ag) {
+            foreach ($issueList as $is) {
+                $matrix[$ag][$is] = $proposals->where('agency', $ag)->where('issue', $is)->count();
+            }
+        }
+
+        $kpi = [
+            'issues'         => $issueList->count(),
+            'agencies'       => $agencyList->count(),
+            'proposals'      => $proposals->count(),
+            'overlap_issues' => $overlapIssues->count(),
+            'pairs'          => $pairs->count(),
+        ];
+
+        return view('phy70::linkage', compact(
+            'proposals', 'issueList', 'agencyList',
+            'byIssue', 'overlapIssues', 'pairs', 'matrix', 'kpi'
+        ));
+    }
+
+    /**
      * Hard-coded mock dataset mirroring the intended `project` and
      * `project_detail` tables. Replace with real queries once the schema
      * is in place.
