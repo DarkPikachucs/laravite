@@ -23,19 +23,21 @@
 
 <body>
   <!-- Global Top Navbar -->
-  <nav class="global-navbar">
+  <nav class="global-navbar" style="position: sticky; top: 0; z-index: 1000; width: 100%;">
     <div class="nav-container">
       <div class="nav-left" style="display: flex; gap: 24px; align-items: center;">
         <a href="/app/phy70" class="nav-link">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
           หน้าหลัก
         </a>
-        
+
         <a href="/app/phy70/dashboard" class="nav-link" style="font-weight: 500;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
             <rect x="14" y="14" width="7" height="7"></rect>
@@ -46,33 +48,37 @@
       </div>
       <div class="nav-right" style="display: flex; gap: 16px; align-items: center;">
         @auth('phy70')
-          <a href="{{ route('phy70.profile') }}" class="user-menu" style="text-decoration: none;">
-            <div class="user-avatar">
-              @if(auth('phy70')->user()->avatar)
-                <img src="{{ auth('phy70')->user()->avatar }}" alt="avatar">
-              @else
-                {{ strtoupper(substr(auth('phy70')->user()->name, 0, 1)) }}
-              @endif
-            </div>
-            <div class="user-info-text">
-              <span class="user-name">{{ auth('phy70')->user()->name }}</span>
-              <span class="user-org">{{ auth('phy70')->user()->organization->name ?? '' }} ({{ ucfirst(auth('phy70')->user()->role) }})</span>
-            </div>
-          </a>
-          <form action="{{ route('phy70.logout') }}" method="POST" style="margin: 0;">
-            @csrf
-            <button type="submit" class="btn-logout">ออกจากระบบ</button>
-          </form>
+        <a href="{{ route('phy70.profile') }}" class="user-menu" style="text-decoration: none;">
+          <div class="user-avatar">
+            @if(auth('phy70')->user()->avatar)
+            <img src="{{ auth('phy70')->user()->avatar }}" alt="avatar">
+            @else
+            {{ strtoupper(substr(auth('phy70')->user()->name, 0, 1)) }}
+            @endif
+          </div>
+          <div class="user-info-text">
+            <span class="user-name">{{ auth('phy70')->user()->name }}</span>
+            <span class="user-org">{{ auth('phy70')->user()->organization->name ?? '' }} ({{
+              ucfirst(auth('phy70')->user()->role) }})</span>
+          </div>
+        </a>
+        <form action="{{ route('phy70.logout') }}" method="POST" style="margin: 0;">
+          @csrf
+          <button type="submit" class="btn-logout">ออกจากระบบ</button>
+        </form>
         @else
-          <a href="{{ route('phy70.login') }}" class="btn-secondary" style="padding: 8px 18px; font-size: 13px;">เข้าสู่ระบบ</a>
-          <a href="{{ route('phy70.register') }}" class="btn-primary" style="padding: 8px 18px; font-size: 13px;">ลงทะเบียนหน่วยงาน</a>
+        <a href="{{ route('phy70.login') }}" class="btn-secondary"
+          style="padding: 8px 18px; font-size: 13px;">เข้าสู่ระบบ</a>
+        <a href="{{ route('phy70.register') }}" class="btn-primary"
+          style="padding: 8px 18px; font-size: 13px;">ลงทะเบียนหน่วยงาน</a>
         @endauth
       </div>
     </div>
   </nav>
   <!-- Theme Toggle Button -->
   <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-    <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+    <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
       <circle cx="12" cy="12" r="5"></circle>
       <line x1="12" y1="1" x2="12" y2="3"></line>
       <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -83,7 +89,8 @@
       <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
       <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
     </svg>
-    <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
     </svg>
   </button>
@@ -104,6 +111,7 @@
       z-index: 1000;
       width: 100%;
     }
+
     .nav-container {
       max-width: 1400px;
       margin: 0 auto;
@@ -112,19 +120,24 @@
       justify-content: space-between;
       align-items: center;
     }
+
     .nav-link {
       display: flex;
       align-items: center;
       gap: 8px;
-      color: #06b6d4; /* var(--secondary) */
+      color: #06b6d4;
+      /* var(--secondary) */
       text-decoration: none;
       font-weight: 600;
       font-size: 15px;
       transition: all 0.2s;
     }
+
     .nav-link:hover {
-      color: #6366f1; /* var(--primary) */
+      color: #6366f1;
+      /* var(--primary) */
     }
+
     /* User Menu Styles */
     .user-menu {
       display: flex;
@@ -136,10 +149,12 @@
       border-radius: 99px;
       transition: all 0.2s;
     }
+
     .user-menu:hover {
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.1);
     }
+
     .user-avatar {
       width: 32px;
       height: 32px;
@@ -153,25 +168,30 @@
       font-size: 14px;
       overflow: hidden;
     }
+
     .user-avatar img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+
     .user-info-text {
       display: flex;
       flex-direction: column;
     }
+
     .user-name {
       font-size: 13px;
       font-weight: 600;
       color: var(--text-main);
       line-height: 1.2;
     }
+
     .user-org {
       font-size: 11px;
       color: var(--text-muted);
     }
+
     .btn-logout {
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.2);
@@ -184,9 +204,11 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+
     .btn-logout:hover {
       background: rgba(239, 68, 68, 0.2);
     }
+
     .btn-primary {
       background: linear-gradient(135deg, var(--primary) 0%, rgba(99, 102, 241, 0.8) 100%);
       border: none;
@@ -199,6 +221,7 @@
       text-decoration: none;
       transition: all 0.2s;
     }
+
     .btn-primary:hover {
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
     }
@@ -208,10 +231,12 @@
       background: rgba(255, 255, 255, 0.9) !important;
       border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
     }
+
     :root.light-theme .user-menu {
       background: rgba(0, 0, 0, 0.03);
       border-color: rgba(0, 0, 0, 0.05);
     }
+
     :root.light-theme .user-menu:hover {
       background: rgba(0, 0, 0, 0.06);
     }
@@ -236,7 +261,7 @@
       color: var(--text-main);
     }
 
-    :root.light-theme .glass-card, 
+    :root.light-theme .glass-card,
     :root.light-theme .stat-card,
     :root.light-theme .glass-header,
     :root.light-theme .selection-display-box {
@@ -250,7 +275,7 @@
       border-color: rgba(0, 0, 0, 0.1) !important;
       color: var(--text-main) !important;
     }
-    
+
     :root.light-theme .btn-secondary:hover {
       background: rgba(0, 0, 0, 0.08) !important;
     }
@@ -261,7 +286,7 @@
       border-color: rgba(0, 0, 0, 0.1) !important;
       color: var(--text-main) !important;
     }
-    
+
     :root.light-theme .form-control:focus {
       border-color: var(--primary) !important;
       box-shadow: 0 0 0 4px var(--primary-glow) !important;
@@ -274,7 +299,7 @@
       border-color: rgba(0, 0, 0, 0.05) !important;
       color: var(--text-main) !important;
     }
-    
+
     :root.light-theme .modal-content,
     :root.light-theme .modal-header {
       background: #ffffff !important;
@@ -289,7 +314,7 @@
       background: rgba(0, 0, 0, 0.03) !important;
       color: var(--text-muted) !important;
     }
-    
+
     :root.light-theme table td,
     :root.light-theme table tr {
       border-color: rgba(0, 0, 0, 0.05) !important;

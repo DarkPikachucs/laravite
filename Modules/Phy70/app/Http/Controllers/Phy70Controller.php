@@ -66,7 +66,7 @@ class Phy70Controller extends Controller
             'main_plan' => 'nullable|string',
             'plan' => 'nullable|string',
             // Section 3
-            'target_province' => $req . '|string|max:255',
+            'target_province' => 'nullable|string|max:255',
             'target_district' => 'nullable|array',
             'target_district.*' => 'string|max:255',
             'target_subdistrict' => 'nullable|array',
@@ -197,6 +197,144 @@ class Phy70Controller extends Controller
         $proposal = $query->findOrFail($id);
 
         return view('phy70::proposals.show', compact('proposal'));
+    }
+
+    public function editProposal($id)
+    {
+        $user = $this->guard()->user();
+        if (!$user) {
+            return redirect('/app/phy70/login');
+        }
+
+        $query = Phy70Proposal::query();
+        if ($user->role !== 'superadmin') {
+            $query->where('organization_id', $user->organization_id);
+        }
+        $proposal = $query->findOrFail($id);
+
+        if ($proposal->status !== 'draft' && $user->role !== 'superadmin') {
+            return redirect('/app/phy70')->with('error', 'ไม่สามารถแก้ไขโครงการที่ส่งแล้วได้');
+        }
+
+        $isEdit = true;
+        return view('phy70::proposals.create', compact('proposal', 'isEdit'));
+    }
+
+    public function updateProposal(Request $request, $id)
+    {
+        $user = $this->guard()->user();
+        if (!$user) {
+            return redirect('/app/phy70/login');
+        }
+
+        $query = Phy70Proposal::query();
+        if ($user->role !== 'superadmin') {
+            $query->where('organization_id', $user->organization_id);
+        }
+        $proposal = $query->findOrFail($id);
+
+        if ($proposal->status !== 'draft' && $user->role !== 'superadmin') {
+            return redirect('/app/phy70')->with('error', 'ไม่สามารถแก้ไขโครงการที่ส่งแล้วได้');
+        }
+
+        $isDraft = $request->input('status') === 'draft';
+        $req = $isDraft ? 'nullable' : 'required';
+
+        $request->validate([
+            // Section 2
+            'province_issue' => $req . '|string',
+            'development_guideline' => 'nullable|string',
+            'main_plan' => 'nullable|string',
+            'plan' => 'nullable|string',
+            // Section 3
+            'target_province' => 'nullable|string|max:255',
+            'target_district' => 'nullable|array',
+            'target_district.*' => 'string|max:255',
+            'target_subdistrict' => 'nullable|array',
+            'target_subdistrict.*' => 'string|max:255',
+            'target_group' => $req . '|string',
+            'project_name' => 'required|string|max:255',
+            'principles' => $req . '|string',
+            'objectives' => $req . '|string',
+            'kpis' => 'nullable|array',
+            'output' => $req . '|string',
+            'outcome' => $req . '|string',
+            'main_activity' => 'nullable|string',
+            'operating_agency' => $req . '|string|max:255',
+            'responsible_person' => $req . '|string|max:255',
+            'position' => 'nullable|string|max:255',
+            'phone_number' => $req . '|string|max:50',
+            'attachments.*' => 'nullable|file|max:10240',
+            'documents' => $isDraft ? 'nullable|array' : 'nullable|array', // Allow no new documents for edits
+            'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,zip,rar|max:20480',
+            'activities' => 'nullable|array',
+            'activities.*.name' => $req . '|string|max:255',
+            'activities.*.budget' => $req . '|numeric|min:0',
+            'activities.*.responsible_person' => $req . '|string|max:255',
+            'activities.*.operating_agency' => 'nullable|string|max:255',
+            'activities.*.involved_agencies' => 'nullable|string|max:255',
+            'activities.*.guideline' => $req . '|string|max:255',
+        ]);
+
+        $documents = is_array($proposal->documents) ? $proposal->documents : [];
+        if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                if ($file->isValid()) {
+                    $path = $file->store('phy70/documents', 'public');
+                    $documents[] = [
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path
+                    ];
+                }
+            }
+        }
+
+        // Only enforce minimum 2 files if it's not a draft and they haven't uploaded enough
+        if (!$isDraft && count($documents) < 2) {
+            return back()->withErrors(['documents' => 'กรุณาแนบเอกสารโครงการอย่างน้อย 2 ไฟล์'])->withInput();
+        }
+
+        $proposal->update([
+            'province_issue' => $request->province_issue,
+            'development_guideline' => $request->development_guideline,
+            'main_plan' => $request->main_plan,
+            'plan' => $request->plan,
+            'target_province' => $request->target_province,
+            'target_district' => $request->target_district,
+            'target_subdistrict' => $request->target_subdistrict,
+            'target_group' => $request->target_group,
+            'project_name' => $request->project_name,
+            'principles' => $request->principles,
+            'objectives' => $request->objectives,
+            'kpis' => $request->kpis,
+            'output' => $request->output,
+            'outcome' => $request->outcome,
+            'main_activity' => $request->main_activity,
+            'operating_agency' => $request->operating_agency,
+            'responsible_person' => $request->responsible_person,
+            'position' => $request->position,
+            'phone_number' => $request->phone_number,
+            'documents' => $documents,
+            'activities' => $request->activities,
+            'status' => $request->input('status', 'submitted'),
+        ]);
+
+        if ($proposal->status === 'submitted' && empty($proposal->project_code)) {
+            $proposal->project_code = 'PRJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
+            $activities = $proposal->activities ?? [];
+            if (is_array($activities)) {
+                foreach ($activities as $index => &$activity) {
+                    if (!isset($activity['activity_code'])) {
+                        $activity['activity_code'] = 'ACT-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT) . '-' . str_pad($index + 1, 2, '0', STR_PAD_LEFT);
+                    }
+                }
+                $proposal->activities = $activities;
+            }
+            $proposal->save();
+        }
+
+        $msg = $isDraft ? 'บันทึกร่างข้อเสนอโครงการเรียบร้อยแล้ว' : 'ส่งข้อเสนอโครงการเรียบร้อยแล้ว';
+        return redirect('/app/phy70/proposal/' . $proposal->id)->with('success', $msg);
     }
 
     /**

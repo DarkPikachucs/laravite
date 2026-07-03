@@ -12,10 +12,6 @@ class Phy70Proposal extends Model
     protected $fillable = [
         'organization_id',
         'user_id',
-        'national_strategy',
-        'master_plan',
-        'national_plan',
-        'regional_development',
         'province_issue',
         'development_guideline',
         'main_plan',

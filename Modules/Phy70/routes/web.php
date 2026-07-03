@@ -45,6 +45,8 @@ Route::prefix('app/phy70')->group(function () {
     Route::get('/proposal/create', [Phy70Controller::class, 'createProposal'])->name('phy70.proposal.create');
     Route::post('/proposal', [Phy70Controller::class, 'storeProposal'])->name('phy70.proposal.store');
     Route::get('/proposal/{id}', [Phy70Controller::class, 'showProposal'])->name('phy70.proposal.show');
+    Route::get('/proposal/{id}/edit', [Phy70Controller::class, 'editProposal'])->name('phy70.proposal.edit');
+    Route::put('/proposal/{id}', [Phy70Controller::class, 'updateProposal'])->name('phy70.proposal.update');
     
     // Superadmin
     Route::get('/superadmin', [Phy70SuperadminController::class, 'index'])->name('phy70.superadmin.index');

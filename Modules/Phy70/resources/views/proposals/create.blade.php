@@ -1,6 +1,10 @@
 <?php
 $isEdit = isset($proposal);
-$route = $isEdit ? route('phy70.superadmin.proposal.update', $proposal->id) : route('phy70.proposal.store');
+$user = auth('phy70')->user();
+$isSuperadmin = $user && $user->role === 'superadmin';
+$route = $isEdit 
+    ? ($isSuperadmin ? route('phy70.superadmin.proposal.update', $proposal->id) : route('phy70.proposal.update', $proposal->id))
+    : route('phy70.proposal.store');
 $method = $isEdit ? 'PUT' : 'POST';
 $oldData = old();
 if (empty($oldData) && $isEdit) {
@@ -244,6 +248,19 @@ if (empty($oldData) && $isEdit) {
     :root.light-theme .kpi-box {
       background: rgba(0, 0, 0, 0.03);
     }
+
+    .custom-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 
   <div class="bg-glow"></div>
@@ -286,7 +303,8 @@ if (empty($oldData) && $isEdit) {
               required>
               <option value="">-- เลือกประเด็นการพัฒนา --</option>
               <template x-for="(issue, index) in issuesData" :key="index">
-                <option :value="issue.issue" x-text="issue.issue"></option>
+                <option :value="issue.issue" x-text="issue.issue" :selected="issue.issue === formData.province_issue">
+                </option>
               </template>
             </select>
           </div>
@@ -316,14 +334,11 @@ if (empty($oldData) && $isEdit) {
                   </div>
                   <div x-show="kpi.selected"
                     style="padding-left: 34px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <template x-for="(target, tIndex) in kpi.targets" :key="tIndex">
-                      <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <span style="font-size: 12px; color: var(--text-muted);"
-                          x-text="'ปี ' + (parseInt(kpi.base_year || 2567) + tIndex + 1)"></span>
-                        <input type="text" :name="'kpis['+index+'][targets]['+tIndex+']'" class="kpi-input"
-                          x-model="kpi.targets[tIndex]" placeholder="ค่าเป้าหมาย">
-                      </div>
-                    </template>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <span style="font-size: 12px; color: var(--text-muted);">ค่าเป้าหมาย</span>
+                      <input type="text" :name="'kpis['+index+'][targets][0]'" class="kpi-input" style="width: 150px;"
+                        x-model="kpi.targets[0]" placeholder="ระบุค่าเป้าหมาย" :required="kpi.selected">
+                    </div>
                     <span style="font-size: 12px; color: var(--secondary);"
                       x-text="'หน่วย: ' + (kpi.target_unit || 'ไม่ระบุ')"></span>
                   </div>
@@ -332,43 +347,7 @@ if (empty($oldData) && $isEdit) {
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">พื้นที่เป้าหมายการดำเนินโครงการ <span
-                style="color: var(--danger);">*</span></label>
-            <div class="grid-3-col">
-              <div>
-                <label class="form-label" style="font-size: 12px; color: var(--text-muted);">จังหวัด</label>
-                <select name="target_province" class="form-control" x-model="formData.target_province" required>
-                  <option value="เพชรบูรณ์">เพชรบูรณ์</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">อำเภอ</label>
-                <select name="target_district[]" class="form-control" x-model="formData.target_district"
-                  @change="formData.target_subdistrict = []" multiple style="height: 120px;">
-                  <template x-for="district in Object.keys(addressData)" :key="district">
-                    <option :value="district" x-text="district"></option>
-                  </template>
-                </select>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">กด Ctrl (Windows) หรือ Command (Mac) ค้างไว้เพื่อเลือกหลายรายการ</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">ตำบล</label>
-                <select name="target_subdistrict[]" class="form-control" x-model="formData.target_subdistrict" multiple style="height: 120px;">
-                  <template x-if="formData.target_district && formData.target_district.length > 0">
-                    <template x-for="district in formData.target_district" :key="district">
-                      <optgroup :label="district">
-                        <template x-for="subdistrict in addressData[district]" :key="subdistrict">
-                          <option :value="subdistrict" x-text="subdistrict"></option>
-                        </template>
-                      </optgroup>
-                    </template>
-                  </template>
-                </select>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">กด Ctrl (Windows) หรือ Command (Mac) ค้างไว้เพื่อเลือกหลายรายการ</div>
-              </div>
-            </div>
-          </div>
+          <input type="hidden" name="target_province" value="เพชรบูรณ์" x-model="formData.target_province">
 
           <div class="form-group">
             <label class="form-label">กลุ่มเป้าหมาย <span style="color: var(--danger);">*</span></label>
@@ -424,36 +403,44 @@ if (empty($oldData) && $isEdit) {
               </div>
 
               <div class="form-group">
-                <label class="form-label">พื้นที่เป้าหมาย (กิจกรรม) <span style="color: var(--danger);">*</span></label>
-                <div class="grid-3-col" style="gap: 10px;">
-                  <select :name="'activities['+index+'][target_province]'" class="form-control"
-                    x-model="act.target_province" required>
-                    <option value="เพชรบูรณ์">เพชรบูรณ์</option>
-                  </select>
-                  <div>
-                    <select :name="'activities['+index+'][target_district][]'" class="form-control"
-                      x-model="act.target_district" @change="act.target_subdistrict = []" multiple style="height: 100px;">
-                      <template x-for="district in Object.keys(addressData)" :key="district">
-                        <option :value="district" x-text="district"></option>
-                      </template>
-                    </select>
-                  </div>
-                  <div>
-                    <select :name="'activities['+index+'][target_subdistrict][]'" class="form-control"
-                      x-model="act.target_subdistrict" multiple style="height: 100px;">
-                      <template x-if="act.target_district && act.target_district.length > 0">
-                        <template x-for="district in act.target_district" :key="district">
-                          <optgroup :label="district">
-                            <template x-for="subdistrict in addressData[district]" :key="subdistrict">
-                              <option :value="subdistrict" x-text="subdistrict"></option>
-                            </template>
-                          </optgroup>
-                        </template>
-                      </template>
-                    </select>
-                  </div>
+                <label class="form-label">พื้นที่เป้าหมาย</label>
+                <button type="button" class="btn-secondary" @click="openTargetAreaModal(index)"
+                  style="width: auto; padding: 5px 15px; font-size: 14px; display: inline-flex; align-items: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    style="margin-right: 5px;">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  เลือกพื้นที่เป้าหมาย
+                </button>
+
+                <div
+                  style="margin-top: 10px; padding: 12px; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);"
+                  x-show="act.target_district.length > 0 || act.target_subdistrict.length > 0">
+                  <template x-if="act.target_district.length > 0">
+                    <div style="font-size: 14px; margin-bottom: 5px;">
+                      <strong style="color: var(--primary);">อำเภอ:</strong>
+                      <span x-text="act.target_district.join(', ')"></span>
+                    </div>
+                  </template>
+                  <template x-if="act.target_subdistrict.length > 0">
+                    <div style="font-size: 14px;">
+                      <strong style="color: var(--primary);">ตำบล:</strong>
+                      <span x-text="act.target_subdistrict.join(', ')"></span>
+                    </div>
+                  </template>
                 </div>
+                <template x-if="act.target_district.length === 0 && act.target_subdistrict.length === 0">
+                  <div style="margin-top: 10px; font-size: 14px; color: var(--text-muted); font-style: italic;">
+                    ยังไม่ได้เลือกพื้นที่เป้าหมาย
+                  </div>
+                </template>
+                <input type="hidden" :name="'activities['+index+'][target_district][]'" :value="act.target_district">
+                <input type="hidden" :name="'activities['+index+'][target_subdistrict][]'"
+                  :value="act.target_subdistrict">
               </div>
+
               <div class="form-group">
                 <label class="form-label">กลุ่มเป้าหมาย (กิจกรรม) <span style="color: var(--danger);">*</span></label>
                 <input type="text" :name="'activities['+index+'][target_group]'" class="form-control"
@@ -550,30 +537,100 @@ if (empty($oldData) && $isEdit) {
         <!-- ================== SECTION 4 ================== -->
         <div class="form-section">
           <h3 class="section-title">ส่วนที่ 4: เอกสารโครงการ</h3>
-          <div class="form-group">
+          <div class="form-group" x-data="{ isDropping: false, files: [] }">
+            <!-- สร้าง hint: แบบ จ.1-1, แบบฟอร์มข้อมูลพื้นฐานโครงการ -->
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">
+              <strong>หมายเหตุ:</strong> กรุณาแนบเอกสารโครงการอย่างน้อย 2 ไฟล์ (เช่น แบบ จ.1-1,
+              แบบฟอร์มข้อมูลพื้นฐานโครงการ)
+            </div>
             <label class="form-label">เอกสารแนบ (อย่างน้อย 2 ไฟล์) <span style="color: var(--danger);">*</span></label>
-            <input type="file" name="documents[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar">
+
+            <style>
+              .drag-drop-zone {
+                border: 2px dashed rgba(255, 255, 255, 0.2);
+                border-radius: 12px;
+                padding: 40px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                background: rgba(0, 0, 0, 0.2);
+                margin-top: 10px;
+              }
+
+              .drag-drop-zone:hover,
+              .drag-drop-zone.is-dropping {
+                border-color: var(--primary);
+                background: rgba(99, 102, 241, 0.1);
+              }
+
+              :root.light-theme .drag-drop-zone {
+                border-color: rgba(0, 0, 0, 0.2);
+                background: rgba(0, 0, 0, 0.02);
+              }
+
+              :root.light-theme .drag-drop-zone:hover,
+              :root.light-theme .drag-drop-zone.is-dropping {
+                border-color: var(--primary);
+                background: rgba(99, 102, 241, 0.05);
+              }
+            </style>
+
+            <div class="drag-drop-zone" :class="{ 'is-dropping': isDropping }" @dragover.prevent="isDropping = true"
+              @dragleave.prevent="isDropping = false"
+              @drop.prevent="isDropping = false; $refs.fileInput.files = $event.dataTransfer.files; files = Array.from($refs.fileInput.files)"
+              @click="$refs.fileInput.click()">
+              <div style="font-size: 32px; margin-bottom: 12px;">📁</div>
+              <div style="font-size: 16px; font-weight: 500; color: var(--text-main); margin-bottom: 8px;">
+                ลากไฟล์มาวางที่นี่ หรือ คลิกเพื่อเลือกไฟล์</div>
+              <div style="font-size: 13px; color: var(--text-muted);">รองรับไฟล์ PDF, Word, Excel, ZIP
+                (สามารถเลือกหลายไฟล์พร้อมกันได้)</div>
+
+              <input type="file" name="documents[]" x-ref="fileInput" multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" style="display: none;"
+                @change="files = Array.from($refs.fileInput.files)">
+            </div>
+
+            <!-- Preview selected files -->
+            <div x-show="files.length > 0" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;"
+              x-transition>
+              <label class="form-label" style="color: var(--success);">ไฟล์ที่เลือกใหม่:</label>
+              <template x-for="file in files" :key="file.name">
+                <div
+                  style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span>📄</span>
+                    <span x-text="file.name" style="font-size: 14px; font-weight: 500;"></span>
+                    <span x-text="'(' + (file.size / 1024 / 1024).toFixed(2) + ' MB)'"
+                      style="font-size: 12px; color: var(--text-muted);"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+
             @error('documents')
             <div style="color: var(--danger); font-size: 13px; margin-top: 5px;">{{ $message }}</div>
             @enderror
-            <div style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">
-              สามารถเลือกหลายไฟล์พร้อมกันได้ (รองรับ PDF, Word, Excel, ZIP)
-            </div>
 
             @if(isset($isEdit) && $isEdit && !empty($proposal->documents))
-            <div style="margin-top: 15px;">
+            <div style="margin-top: 24px;">
               <label class="form-label">เอกสารที่อัปโหลดไว้แล้ว:</label>
-              <ul style="padding-left: 20px;">
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
                 @foreach(is_array($proposal->documents) ? $proposal->documents : [] as $doc)
                 @php
-                    $isOldFormat = is_string($doc);
-                    $docPath = $isOldFormat ? $doc : $doc['path'];
-                    $docName = $isOldFormat ? basename($doc) : $doc['name'];
+                $isOldFormat = is_string($doc);
+                $docPath = $isOldFormat ? $doc : $doc['path'];
+                $docName = $isOldFormat ? basename($doc) : $doc['name'];
                 @endphp
-                <li><a href="{{ Storage::url(preg_replace('~^/storage/~', '', $docPath)) }}" target="_blank" style="color: var(--secondary);">{{
-                    $docName }}</a></li>
+                <div
+                  style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                  <span>📄</span>
+                  <a href="{{ Storage::url(preg_replace('~^/storage/~', '', $docPath)) }}" target="_blank"
+                    style="color: var(--secondary); text-decoration: none; font-size: 14px; transition: color 0.2s;"
+                    onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--secondary)'">{{ $docName
+                    }}</a>
+                </div>
                 @endforeach
-              </ul>
+              </div>
             </div>
             @endif
           </div>
@@ -583,12 +640,58 @@ if (empty($oldData) && $isEdit) {
           <button type="submit" name="status" value="draft" class="btn-secondary" formnovalidate>
             💾 บันทึกร่าง
           </button>
-          <button type="submit" name="status" value="{{ $isEdit ? $proposal->status : 'submitted' }}"
-            class="btn-action">
-            ✓ {{ $isEdit ? 'บันทึกการแก้ไข' : 'ส่งข้อเสนอโครงการ' }}
+          <button type="submit" name="status"
+            value="{{ $isEdit && $proposal->status !== 'draft' ? $proposal->status : 'submitted' }}" class="btn-action">
+            ✓ {{ $isEdit && $proposal->status !== 'draft' ? 'บันทึกการแก้ไข' : 'ส่งข้อเสนอโครงการ' }}
           </button>
         </div>
       </form>
+    </div>
+    <!-- Target Area Modal -->
+    <div x-show="targetAreaModal.isOpen" class="custom-modal-backdrop" style="display: none;" x-transition.opacity>
+      <div class="modal-content glass-card"
+        style="width: 90%; max-width: 700px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;"
+        @click.outside="closeTargetAreaModal()">
+        <h3
+          style="margin-top: 0; margin-bottom: 20px; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 10px;">
+          เลือกพื้นที่เป้าหมาย</h3>
+
+        <div class="grid-2-col" style="gap: 20px;">
+          <div class="form-group">
+            <label class="form-label">อำเภอ</label>
+            <select x-model="targetAreaModal.temp_district" class="form-control" multiple
+              @change="targetAreaModal.temp_subdistrict = []" style="height: 300px;">
+              <template x-for="district in Object.keys(addressData)" :key="district">
+                <option :value="district" x-text="district"></option>
+              </template>
+            </select>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">กด Ctrl (Windows) หรือ Command
+              (Mac) ค้างไว้เพื่อเลือกหลายรายการ</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ตำบล</label>
+            <select x-model="targetAreaModal.temp_subdistrict" class="form-control" multiple style="height: 300px;">
+              <template x-if="targetAreaModal.temp_district && targetAreaModal.temp_district.length > 0">
+                <template x-for="district in targetAreaModal.temp_district" :key="district">
+                  <optgroup :label="district">
+                    <template x-for="subdistrict in addressData[district]" :key="subdistrict">
+                      <option :value="subdistrict" x-text="subdistrict"></option>
+                    </template>
+                  </optgroup>
+                </template>
+              </template>
+            </select>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">กด Ctrl (Windows) หรือ Command
+              (Mac) ค้างไว้เพื่อเลือกหลายรายการ</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+          <button type="button" class="btn-secondary" @click="closeTargetAreaModal()">ยกเลิก</button>
+          <button type="button" class="btn-action" @click="saveTargetAreaModal()">บันทึก</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -596,17 +699,17 @@ if (empty($oldData) && $isEdit) {
     document.addEventListener('alpine:init', () => {
         const issuesData = [
             {
-                "issue": "ประเด็นการพัฒนาที่ 1 การพัฒนาเมือง ท่องเที่ยวเชิงสร้างสรรค์ และบริการสุขภาพมูลค่าสูง",
+                "issue": "ประเด็นการพัฒนาที่ 1 การพัฒนาการท่องเที่ยวมูลค่าสูงเชิงสร้างสรรค์บนฐานอัตลักษณ์ของพื้นที่",
                 "kpis": [
-                  {"name": "GPP จังหวัดภาคเกษตรเพิ่มขึ้น (ร้อยละ5)", "base_year": 2567, "base_value": "32,564 ล้านบาท",  "target_unit": "ร้อยละ",  "targets": [5, 5, 5, 5, 5]},
-                  {"name": "ผลิตภาพแรงงานภาคเกษตร เพิ่มขึ้น (ร้อยละ5)", "base_year": 2567, "base_value": "155,514.70 บาท/คน/ปี",  "target_unit": "ร้อยละ",  "targets": [5, 5, 5, 5, 5]},
+                  {"name": "GPP จังหวัดภาคเกษตรเพิ่มขึ้น (ร้อยละ 5)", "base_year": 2567, "base_value": "32,564 ล้านบาท",  "target_unit": "ร้อยละ",  "targets": [5, 5, 5, 5, 5]},
+                  {"name": "ผลิตภาพแรงงานภาคเกษตร เพิ่มขึ้น (ร้อยละ 5)", "base_year": 2567, "base_value": "155,514.70 บาท/คน/ปี",  "target_unit": "ร้อยละ",  "targets": [5, 5, 5, 5, 5]},
                   {"name": "จำนวนสินค้าเกษตรที่ได้รับมาตรฐานสินค้าเกษตรมูลค่าสูง",  "base_year": 2567, "base_value": "1,938 ราย",  "target_unit": "ราย",  "targets": [2000, 2200, 2400, 2500, 0]},
                   {"name": "รายได้เงินสดสุทธิทางการเกษตรเฉลี่ยต่อครัวเรือนเพิ่มขึ้น  (เกษตรกรที่มีรายได้ในภาคการเกษตร)", "base_year": 2568, "base_value": "91,829 บาท",  "target_unit": "บาท",  "targets": [0, 0, 0, 0, 0]},
                   {"name": "จำนวนแปลง/ฟาร์ม และผลิตภัณฑ์สินค้าเกษตรที่ได้รับการการรับรองมาตรฐานเกษตร ปลอดภัย (GAP)เพิ่มขึ้น",  "base_year": 2569, "base_value": "2,500 แปลง",  "target_unit": "แปลง",  "targets": [0, 0, 0, 0, 0]}
                 ]
             },
             {
-                "issue": "ประเด็นการพัฒนาที่ 2 การพัฒนาการท่องเที่ยวมูลค่าสูงเชิงสร้างสรรค์บนฐานอัตลักษณ์ของพื้นที่",
+                "issue": "ประเด็นการพัฒนาที่ 2 การพัฒนาการเกษตรมูลค่าสูงอย่างยั่งยืน",
                 "kpis": [
                   {"name": "รายได้จากการท่องเที่ยวเพิ่มขึ้น", "base_year": 2568, "base_value": "9,981.97 ล้านบาท", "target_unit": "ร้อยละ", "targets": [5, 5, 5, 5, 5]},
                   {"name": "ผลิตภาพแรงงานภาคบริการ (ท่องเที่ยว) เพิ่มขึ้น", "base_year": null, "base_value": null, "target_unit": null, "targets": [0, 0, 0, 0, 0]},
@@ -654,18 +757,7 @@ if (empty($oldData) && $isEdit) {
         ];
 
         const guidelinesData = {
-            "ประเด็นการพัฒนาที่ 1 การพัฒนาเมือง ท่องเที่ยวเชิงสร้างสรรค์ และบริการสุขภาพมูลค่าสูง": [
-                "พัฒนาโครงสร้างพื้นฐาน เพื่อสนับสนุนการพัฒนาการเกษตรมูลค่าสูง",
-                "ยกระดับผลิตภาพและเพิ่มประสิทธิภาพการผลิตภาคเกษตรการเพิ่มโอกาสเข้าสู่ตลาดมูลค่าสูงและตลาดระดับพรีเมียม",
-                "ยกระดับมาตรฐานสินค้าเกษตรสู่สากล ด้วยการพัฒนาระบบรับรองมาตรฐาน และระบบตรวจสอบย้อนกลับ",
-                "ส่งเสริมกระบวนการผลิตที่เป็นมิตรต่อสิ่งแวดล้อม",
-                "พัฒนาเกษตรอัตลักษณ์และสินค้าที่ขึ้นทะเบียนสิ่งบ่งชี้ทางภูมิศาสตร์",
-                "เสริมสร้างความมั่นคงของภาคเกษตรในการรับมือกับความเสี่ยงการเปลี่ยนแปลงสภาพภูมิอากาศ",
-                "สร้างมูลค่าเพิ่มให้ภาคเกษตรสู่ผลิตภัณฑ์อาหารและผลิตภัณฑ์สุขภาพมูลค่าสูง",
-                "การนำงานวิจัย เทคโนโลยี และนวัตกรรมแปรรูปขั้นสูง ยกระดับคุณภาพและสร้างความแตกต่างให้กับสินค้า",
-                "เชื่อมโยงภาคเกษตรกับการท่องเที่ยวเชิงเกษตร การท่องเที่ยวเชิงสุขภาพ และการบริการสุขภาพเชิงประสบการณ์"
-            ],
-            "ประเด็นการพัฒนาที่ 2 การพัฒนาการท่องเที่ยวมูลค่าสูงเชิงสร้างสรรค์บนฐานอัตลักษณ์ของพื้นที่": [
+            "ประเด็นการพัฒนาที่ 1 การพัฒนาการท่องเที่ยวมูลค่าสูงเชิงสร้างสรรค์บนฐานอัตลักษณ์ของพื้นที่": [
                 "พัฒนาโครงสร้างพื้นฐาน สิ่งอำนวยความสะดวก และสร้างระบบนิเวศเพื่อรองรับการท่องเที่ยวคุณภาพสูง",
                 "พัฒนาแหล่งท่องเที่ยวและเส้นทางท่องเที่ยวบนฐานอัตลักษณ์พื้นที่",
                 "สร้างมูลค่าเพิ่มให้กับผลิตภัณฑ์และบริการที่เป็นอัตลักษณ์ของท้องถิ่นเพื่อตอบโจทย์ความต้องการของตลาดคุณภาพสูงและสังคมสูงวัย",
@@ -678,6 +770,17 @@ if (empty($oldData) && $isEdit) {
                 "ถ่ายทอดองค์ความรู้ เทคโนโลยี และการเข้าถึงตลาด ใช้ข้อมูลและเทคโนโลยีดิจิทัลในการวางแผน และเพิ่มประสิทธิภาพการบริหารจัดการการท่องเที่ยว",
                 "ส่งเสริมบทบาทภาคีเครือข่ายการลงทุนและการบริหารจัดการการท่องเที่ยวแบบมีส่วนร่วม",
                 "พัฒนาการตลาด แบรนด์ และการสื่อสารการท่องเที่ยวบนฐานอัตลักษณ์เพชรบูรณ์"
+            ],
+            "ประเด็นการพัฒนาที่ 2 การพัฒนาการเกษตรมูลค่าสูงอย่างยั่งยืน": [
+                "พัฒนาโครงสร้างพื้นฐาน เพื่อสนับสนุนการพัฒนาการเกษตรมูลค่าสูง",
+                "ยกระดับผลิตภาพและเพิ่มประสิทธิภาพการผลิตภาคเกษตรการเพิ่มโอกาสเข้าสู่ตลาดมูลค่าสูงและตลาดระดับพรีเมียม",
+                "ยกระดับมาตรฐานสินค้าเกษตรสู่สากล ด้วยการพัฒนาระบบรับรองมาตรฐาน และระบบตรวจสอบย้อนกลับ",
+                "ส่งเสริมกระบวนการผลิตที่เป็นมิตรต่อสิ่งแวดล้อม",
+                "พัฒนาเกษตรอัตลักษณ์และสินค้าที่ขึ้นทะเบียนสิ่งบ่งชี้ทางภูมิศาสตร์",
+                "เสริมสร้างความมั่นคงของภาคเกษตรในการรับมือกับความเสี่ยงการเปลี่ยนแปลงสภาพภูมิอากาศ",
+                "สร้างมูลค่าเพิ่มให้ภาคเกษตรสู่ผลิตภัณฑ์อาหารและผลิตภัณฑ์สุขภาพมูลค่าสูง",
+                "การนำงานวิจัย เทคโนโลยี และนวัตกรรมแปรรูปขั้นสูง ยกระดับคุณภาพและสร้างความแตกต่างให้กับสินค้า",
+                "เชื่อมโยงภาคเกษตรกับการท่องเที่ยวเชิงเกษตร การท่องเที่ยวเชิงสุขภาพ และการบริการสุขภาพเชิงประสบการณ์"
             ],
             "ประเด็นการพัฒนาที่ 3 การพัฒนาความมั่นคง คุณภาพชีวิต การศึกษา และผลิตภาพคนทุกช่วงวัย": [
                 "พัฒนาโครงสร้างพื้นฐานสนับสนุนการพัฒนาคุณภาพชีวิต",
@@ -734,6 +837,12 @@ if (empty($oldData) && $isEdit) {
                 "เขาค้อ": ["เขาค้อ", "สะเดาะพง", "หนองแม่นา", "แคมป์สน", "ทุ่งสมอ", "ริมสีม่วง", "เข็กน้อย"]
             },
             currentKPIs: [],
+            targetAreaModal: {
+                isOpen: false,
+                activityIndex: null,
+                temp_district: [],
+                temp_subdistrict: []
+            },
             formData: {
                 project_name: oldData.project_name || '',
                 province_issue: oldData.province_issue || '',
@@ -790,9 +899,9 @@ if (empty($oldData) && $isEdit) {
                     name: '',
                     budget: '',
                     guideline: '',
-                    target_province: this.formData.target_province || 'เพชรบูรณ์',
-                    target_district: Array.isArray(this.formData.target_district) ? [...this.formData.target_district] : (this.formData.target_district ? [this.formData.target_district] : []),
-                    target_subdistrict: Array.isArray(this.formData.target_subdistrict) ? [...this.formData.target_subdistrict] : (this.formData.target_subdistrict ? [this.formData.target_subdistrict] : []),
+                    target_province: 'เพชรบูรณ์',
+                    target_district: [],
+                    target_subdistrict: [],
                     target_group: this.formData.target_group || '',
                     project_kpis: [],
                     activity_kpis: [{name: ''}],
@@ -804,6 +913,27 @@ if (empty($oldData) && $isEdit) {
 
             removeActivity(index) {
                 this.formData.activities.splice(index, 1);
+            },
+            openTargetAreaModal(index) {
+                this.targetAreaModal.activityIndex = index;
+                const act = this.formData.activities[index];
+                this.targetAreaModal.temp_district = Array.isArray(act.target_district) ? [...act.target_district] : (act.target_district ? [act.target_district] : []);
+                this.targetAreaModal.temp_subdistrict = Array.isArray(act.target_subdistrict) ? [...act.target_subdistrict] : (act.target_subdistrict ? [act.target_subdistrict] : []);
+                this.targetAreaModal.isOpen = true;
+            },
+
+            saveTargetAreaModal() {
+                if (this.targetAreaModal.activityIndex !== null) {
+                    const index = this.targetAreaModal.activityIndex;
+                    this.formData.activities[index].target_district = [...this.targetAreaModal.temp_district];
+                    this.formData.activities[index].target_subdistrict = [...this.targetAreaModal.temp_subdistrict];
+                }
+                this.closeTargetAreaModal();
+            },
+
+            closeTargetAreaModal() {
+                this.targetAreaModal.isOpen = false;
+                this.targetAreaModal.activityIndex = null;
             }
         }));
     });

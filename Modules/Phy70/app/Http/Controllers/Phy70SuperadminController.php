@@ -100,7 +100,7 @@ class Phy70SuperadminController extends Controller
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
             'plan' => 'nullable|string',
-            'target_province' => $req . '|string|max:255',
+            'target_province' => 'nullable|string|max:255',
             'target_district' => 'nullable|array',
             'target_district.*' => 'string|max:255',
             'target_subdistrict' => 'nullable|array',
@@ -160,7 +160,7 @@ class Phy70SuperadminController extends Controller
 
         $this->generateCodesIfSubmitted($proposal);
 
-        return redirect('/app/phy70/superadmin')->with('success', 'บันทึกการแก้ไขโครงการเรียบร้อยแล้ว');
+        return redirect('/app/phy70/proposal/' . $proposal->id)->with('success', 'บันทึกการแก้ไขโครงการเรียบร้อยแล้ว');
     }
 
     public function updateProposalStatus(Request $request, $id)
