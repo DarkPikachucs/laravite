@@ -338,15 +338,16 @@ class Phy70Controller extends Controller
     }
 
     /**
-     * Executive dashboard (mockup) — summarises project & activity data
-     * for an at-a-glance overview. Uses in-memory mock data for now.
+     * Executive dashboard — summarises project & activity data for an
+     * at-a-glance overview. Reads live proposals from the database; sections
+     * with no data render an explicit "ยังไม่มีข้อมูล" (no data yet) state.
      */
     public function dashboard()
     {
-        // ---- Mock data: projects (ตารางโครงการ) ----------------------------
-        $projects = collect($this->mockProjects());
+        // ---- Real data: proposals mapped to the dashboard shape -----------
+        $projects = $this->realProjects();
 
-        // ---- Mock data: project_detail (ตารางรายละเอียดกิจกรรม) -----------
+        // ---- Activity rows (project_detail) flattened across all projects -
         $details = $projects->flatMap(fn ($p) => $p['details'])->values();
 
         // Derive total budget & activity count per project from its details
@@ -401,11 +402,11 @@ class Phy70Controller extends Controller
      * Linkage view — วิเคราะห์ความเชื่อมโยง/ทับซ้อนของ "ประเด็นการพัฒนา"
      * ข้ามหน่วยงาน: หน่วยงานใดบ้างที่เสนอโครงการอยู่ในประเด็นเดียวกัน
      * (ทับซ้อนข้ามหน่วยงาน) และหน่วยงานใดเสนอซ้ำหลายโครงการในประเด็นเดียวกัน.
-     * ใช้ mock data ชุดเดียวกับ dashboard เพื่อให้ข้อมูลสอดคล้องกัน.
+     * อ่านข้อมูลจริงจากฐานข้อมูลชุดเดียวกับ dashboard เพื่อให้ข้อมูลสอดคล้องกัน.
      */
     public function linkage()
     {
-        $projects = collect($this->mockProjects());
+        $projects = $this->realProjects();
 
         // แต่ละโครงการ = 1 ข้อเสนอ (ประเด็น + หน่วยงานดำเนินการ + งบรวม)
         $proposals = $projects->map(fn ($p) => [
@@ -580,6 +581,84 @@ class Phy70Controller extends Controller
      * `project_detail` tables. Replace with real queries once the schema
      * is in place.
      */
+    /**
+     * Map live Phy70Proposal rows into the shape the dashboard view expects
+     * (project header + flattened "details" per activity). Missing values fall
+     * back to a readable placeholder so grouping/rendering never breaks.
+     */
+    private function realProjects(): \Illuminate\Support\Collection
+    {
+        return Phy70Proposal::orderByDesc('id')->get()->map(function ($p) {
+            $activities = is_array($p->activities) ? $p->activities : [];
+            $code = $this->cleanValue($p->project_code, 'PJ-' . $p->id);
+
+            $details = [];
+            foreach ($activities as $i => $a) {
+                $a = is_array($a) ? $a : [];
+                $details[] = [
+                    'activity_id'        => $code . '-' . str_pad($i + 1, 2, '0', STR_PAD_LEFT),
+                    'guideline'          => $this->cleanValue($a['guideline'] ?? null, $this->cleanValue($p->development_guideline, 'ไม่ระบุแนวทาง')),
+                    'target_area'        => $this->deriveArea($a, $p),
+                    'target_group'       => $this->cleanValue($a['target_group'] ?? null, $this->cleanValue($p->target_group, 'ไม่ระบุกลุ่มเป้าหมาย')),
+                    'activity'           => $this->cleanValue($a['name'] ?? null, 'ไม่ระบุชื่อกิจกรรม'),
+                    'budget'             => (float) ($a['budget'] ?? 0),
+                    'responsible_person' => $this->cleanValue($a['responsible_person'] ?? null, $this->cleanValue($p->responsible_person, '—')),
+                    'responsible_agency' => $this->cleanValue($a['responsible_agency'] ?? null, $this->cleanValue($p->operating_agency, '—')),
+                    'related_agency'     => collect($a['co_agencies'] ?? [])->pluck('name')->filter()->implode(', ') ?: '—',
+                ];
+            }
+
+            return [
+                'project_id'         => $code,
+                'project_name'       => $this->cleanValue($p->project_name, 'ไม่ระบุชื่อโครงการ'),
+                'province_issue'     => $this->cleanValue($p->province_issue, 'ไม่ระบุประเด็น'),
+                'province_guideline' => $this->cleanValue($p->development_guideline, 'ไม่ระบุแนวทาง'),
+                'rationale'          => $this->cleanValue($p->principles, '—'),
+                'objective'          => $this->cleanValue($p->objectives, '—'),
+                'operating_agency'   => $this->cleanValue($p->operating_agency, 'ไม่ระบุหน่วยงาน'),
+                'output'             => $this->cleanValue($p->output, '—'),
+                'outcome'            => $this->cleanValue($p->outcome, '—'),
+                'details'            => $details,
+            ];
+        })->values();
+    }
+
+    /**
+     * Trim a value and return $fallback when it is null/empty/blank array.
+     */
+    private function cleanValue($value, $fallback)
+    {
+        if (is_array($value)) {
+            $value = collect($value)->filter()->implode(', ');
+        }
+        $value = is_string($value) ? trim($value) : $value;
+
+        return ($value === null || $value === '') ? $fallback : $value;
+    }
+
+    /**
+     * Derive a single representative target area for an activity. Prefers the
+     * activity's district list (first district), falls back to the province.
+     */
+    private function deriveArea(array $a, $p): string
+    {
+        $districts = collect($a['target_district'] ?? [])
+            ->flatMap(fn ($d) => explode(',', (string) $d))
+            ->map(fn ($d) => trim($d))
+            ->filter()
+            ->values();
+
+        if ($districts->count()) {
+            return $districts->count() > 1
+                ? 'อ.' . $districts->first() . ' (+' . ($districts->count() - 1) . ')'
+                : 'อ.' . $districts->first();
+        }
+
+        $province = $this->cleanValue($p->target_province, null);
+
+        return $province ? 'จ.' . $province : 'ไม่ระบุพื้นที่';
+    }
+
     private function mockProjects(): array
     {
         $issues = [

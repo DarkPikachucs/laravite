@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection('sqlite_phy70')->table('phy70_proposals', function (Blueprint $table) {
-            $table->dropColumn(['national_strategy', 'master_plan', 'national_plan', 'regional_development']);
+            foreach (['national_strategy', 'master_plan', 'national_plan', 'regional_development'] as $column) {
+                if (Schema::connection('sqlite_phy70')->hasColumn('phy70_proposals', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
         });
     }
 
