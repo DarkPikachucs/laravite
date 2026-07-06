@@ -42,6 +42,18 @@
             'ต.ดงขุย (อ.ชนแดน)'             => [16.2519, 100.7606],
             'ต.ศรีเทพ (อ.ศรีเทพ)'           => [15.4675, 101.1436],
             'ต.ซับสมอทอด (อ.บึงสามพัน)'      => [15.7936, 101.0508],
+            // ---- District (อำเภอ) level centroids — ใช้เมื่อพื้นที่มาในรูป "อ.xxx" --
+            'อ.เมืองเพชรบูรณ์'  => [16.4189, 101.1591],
+            'อ.หล่มสัก'        => [16.7756, 101.2419],
+            'อ.หล่มเก่า'       => [16.8869, 101.2103],
+            'อ.วิเชียรบุรี'     => [15.6569, 101.1072],
+            'อ.ศรีเทพ'         => [15.4675, 101.1436],
+            'อ.หนองไผ่'        => [15.9962, 101.1172],
+            'อ.บึงสามพัน'      => [15.7936, 101.0508],
+            'อ.ชนแดน'          => [16.1783, 100.8103],
+            'อ.วังโป่ง'        => [16.3603, 100.8283],
+            'อ.น้ำหนาว'        => [16.7922, 101.5314],
+            'อ.เขาค้อ'         => [16.6644, 101.0453],
         ];
 
         // ---- Per-tambon aggregation with issue & guideline breakdown -------
@@ -186,6 +198,28 @@
             color: var(--warning); padding: 5px 12px; border-radius: 99px;
             font-size: 12px; font-weight: 500;
         }
+        .live-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(5, 150, 105, 0.10); border: 1px solid rgba(5, 150, 105, 0.25);
+            color: var(--success); padding: 5px 12px; border-radius: 99px;
+            font-size: 12px; font-weight: 500;
+        }
+
+        /* Empty state — shown wherever a section has no data yet */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 12px; text-align: center; color: var(--text-muted);
+            padding: 40px 20px; width: 100%;
+        }
+        .empty-state.compact { padding: 28px 16px; }
+        .empty-icon {
+            width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--primary-soft); color: var(--primary);
+        }
+        .empty-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+        .empty-desc { font-size: 13px; color: var(--text-muted); max-width: 420px; line-height: 1.5; }
+        .empty-cell { text-align: center; color: var(--text-muted); padding: 36px 16px !important; font-size: 13.5px; }
 
         .glass-card {
             background: var(--bg-surface);
@@ -385,18 +419,20 @@
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span class="mockup-badge">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    ข้อมูลจำลอง (Mockup)
+                <span class="live-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    ข้อมูลจริง · {{ number_format($projects->count()) }} โครงการ
                 </span>
                 <a href="{{ route('phy70.linkage') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                     การเชื่อมโยง
                 </a>
+                {{-- เมนูประเมินคุณภาพถูกปิดไว้ชั่วคราว
                 <a href="{{ route('phy70.scorecard') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                     ประเมินคุณภาพ
                 </a>
+                --}}
                 <a href="{{ route('phy70.index') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     กลับหน้าหลัก
@@ -406,6 +442,23 @@
 
         <h2 class="page-title">แดชบอร์ดสรุปข้อมูลโครงการ</h2>
         <p class="page-desc">ภาพรวมเชิงวิเคราะห์ของโครงการและกิจกรรมภายใต้แผนพัฒนาจังหวัด — สรุปงบประมาณ ประเด็นการพัฒนา พื้นที่และกลุ่มเป้าหมาย</p>
+
+        @if($projects->isEmpty())
+        <!-- No proposals in the database yet -->
+        <div class="glass-card">
+            <div class="empty-state">
+                <div class="empty-icon" style="width: 64px; height: 64px; border-radius: 18px;">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                </div>
+                <div class="empty-title" style="font-size: 18px;">ยังไม่มีข้อมูลโครงการ</div>
+                <div class="empty-desc">ยังไม่มีข้อเสนอโครงการในระบบ เมื่อมีการบันทึกข้อเสนอโครงการแล้ว แดชบอร์ดจะแสดงสรุปงบประมาณ ประเด็นการพัฒนา พื้นที่ และกลุ่มเป้าหมายโดยอัตโนมัติ</div>
+                <a href="{{ route('phy70.proposal.create') }}" class="btn-secondary" style="margin-top: 6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    เพิ่มข้อเสนอโครงการ
+                </a>
+            </div>
+        </div>
+        @else
 
         <!-- KPI cards -->
         <div class="kpi-grid">
@@ -478,7 +531,7 @@
             </h3>
             <p class="section-sub">งบประมาณและจำนวนโครงการแยกตามประเด็นการพัฒนา — แต่ละประเด็นมีสีและไอคอนกำกับ</p>
             <div class="issue-grid">
-                @foreach($budgetByIssue as $issue => $budget)
+                @forelse($budgetByIssue as $issue => $budget)
                     @php $m = $issueMeta[$issue] ?? $issueDefault; @endphp
                     <div class="issue-card">
                         <div class="issue-accent" style="background: {{ $m['color'] }};"></div>
@@ -496,7 +549,13 @@
                             <div class="issue-bar-fill" style="width: {{ round($budget / $maxIssueBudget * 100) }}%; background: {{ $m['color'] }};"></div>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="empty-state compact">
+                        <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['flag'] !!}</svg></div>
+                        <div class="empty-title">ยังไม่มีข้อมูลประเด็นการพัฒนา</div>
+                        <div class="empty-desc">ยังไม่มีข้อเสนอที่ระบุประเด็นการพัฒนาของจังหวัด</div>
+                    </div>
+                @endforelse
             </div>
         </div>
 
@@ -504,11 +563,19 @@
         <div class="charts-grid">
             <div class="glass-card chart-card">
                 <h3 class="section-title" style="color: var(--secondary);">สัดส่วนงบประมาณตามแนวทางการพัฒนาจังหวัด</h3>
-                <div class="chart-canvas-wrap"><canvas id="chartGuideline"></canvas></div>
+                @if($budgetByGuideline->sum() <= 0)
+                    <div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามแนวทาง</div><div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุแนวทางและงบประมาณ</div></div>
+                @else
+                    <div class="chart-canvas-wrap"><canvas id="chartGuideline"></canvas></div>
+                @endif
             </div>
             <div class="glass-card chart-card">
                 <h3 class="section-title" style="color: var(--success);">งบประมาณตามหน่วยงานดำเนินการ</h3>
-                <div class="chart-canvas-wrap"><canvas id="chartAgency"></canvas></div>
+                @if($budgetByAgency->sum() <= 0)
+                    <div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามหน่วยงาน</div><div class="empty-desc">ยังไม่มีโครงการที่ระบุหน่วยงานและงบประมาณ</div></div>
+                @else
+                    <div class="chart-canvas-wrap"><canvas id="chartAgency"></canvas></div>
+                @endif
             </div>
         </div>
 
@@ -531,7 +598,7 @@
             </div>
 
             <div class="layer-map">
-                @foreach($budgetByArea as $area => $budget)
+                @forelse($budgetByArea as $area => $budget)
                     @php
                         $ci = $loop->index % count($areaPalette);
                         $color = $areaPalette[$ci];
@@ -560,7 +627,13 @@
                             </div>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="empty-state compact">
+                        <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['pin'] !!}</svg></div>
+                        <div class="empty-title">ยังไม่มีข้อมูลพื้นที่เป้าหมาย</div>
+                        <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุพื้นที่เป้าหมายและงบประมาณ</div>
+                    </div>
+                @endforelse
             </div>
         </div>
 
@@ -568,12 +641,16 @@
         <div class="charts-grid">
             <div class="glass-card chart-card">
                 <h3 class="section-title" style="color: #db2777;">งบประมาณตามกลุ่มเป้าหมาย</h3>
-                <div class="chart-canvas-wrap"><canvas id="chartGroup"></canvas></div>
+                @if($budgetByTargetGroup->sum() <= 0)
+                    <div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลกลุ่มเป้าหมาย</div><div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุกลุ่มเป้าหมายและงบประมาณ</div></div>
+                @else
+                    <div class="chart-canvas-wrap"><canvas id="chartGroup"></canvas></div>
+                @endif
             </div>
             <div class="glass-card chart-card">
                 <h3 class="section-title" style="color: #9333ea;">5 โครงการงบประมาณสูงสุด</h3>
                 <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
-                    @foreach($topProjects as $i => $p)
+                    @forelse($topProjects as $i => $p)
                         <div style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px;">
                             <span class="rank-badge">{{ $i + 1 }}</span>
                             <div style="flex: 1; min-width: 0;">
@@ -585,7 +662,9 @@
                                 <div style="font-size: 11px; color: var(--text-faint);">บาท</div>
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลโครงการ</div></div>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -613,7 +692,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($projects as $p)
+                        @forelse($projects as $p)
                             @php $im = $issueMeta[$p['province_issue']] ?? $issueDefault; @endphp
                             <tr>
                                 <td class="code-cell">{{ $p['project_id'] }}</td>
@@ -627,7 +706,9 @@
                                 <td class="cell-clip" title="{{ $p['outcome'] }}">{{ $p['outcome'] }}</td>
                                 <td class="num-cell">{{ number_format($p['total_budget']) }}</td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr><td colspan="10" class="empty-cell">ยังไม่มีข้อมูลโครงการ</td></tr>
+                        @endforelse
                     </tbody>
                     <tfoot>
                         <tr>
@@ -662,6 +743,9 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @if($details->isEmpty())
+                            <tr><td colspan="10" class="empty-cell">ยังไม่มีข้อมูลกิจกรรม</td></tr>
+                        @endif
                         @foreach($projects as $p)
                             @foreach($p['details'] as $d)
                                 <tr>
@@ -682,8 +766,10 @@
                 </table>
             </div>
         </div>
+        @endif
     </div>
 
+    @unless($projects->isEmpty())
     <script>
         // ---- Leaflet area map (ข้อมูลพื้นที่ — เลือก layer: ตำบล/ประเด็น/แนวทาง) ----
         const areaData = @json($areaMapData);
@@ -790,6 +876,7 @@
         const bahtFmt = (v) => new Intl.NumberFormat('th-TH').format(v);
 
         // Budget by guideline (doughnut)
+        @if($budgetByGuideline->sum() > 0)
         new Chart(document.getElementById('chartGuideline'), {
             type: 'doughnut',
             data: {
@@ -804,8 +891,10 @@
                 }
             }
         });
+        @endif
 
         // Budget by operating agency (horizontal bar)
+        @if($budgetByAgency->sum() > 0)
         new Chart(document.getElementById('chartAgency'), {
             type: 'bar',
             data: {
@@ -821,8 +910,10 @@
                 }
             }
         });
+        @endif
 
         // Budget by target group (pie)
+        @if($budgetByTargetGroup->sum() > 0)
         new Chart(document.getElementById('chartGroup'), {
             type: 'pie',
             data: {
@@ -837,5 +928,7 @@
                 }
             }
         });
+        @endif
     </script>
+    @endunless
 </x-phy70::layouts.master>

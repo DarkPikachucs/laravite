@@ -14,12 +14,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('phy70_proposals', function (Blueprint $table) {
-            $table->text('principles')->nullable()->after('project_name');
-            $table->text('objectives')->nullable()->after('principles');
-            $table->json('kpis')->nullable()->after('objectives');
-            $table->text('target_group')->nullable()->after('target_subdistrict');
-            $table->text('output')->nullable();
-            $table->text('outcome')->nullable();
+            $has = fn ($column) => Schema::connection('sqlite_phy70')->hasColumn('phy70_proposals', $column);
+
+            if (! $has('principles'))   $table->text('principles')->nullable()->after('project_name');
+            if (! $has('objectives'))   $table->text('objectives')->nullable()->after('principles');
+            if (! $has('kpis'))         $table->json('kpis')->nullable()->after('objectives');
+            if (! $has('target_group')) $table->text('target_group')->nullable()->after('target_subdistrict');
+            if (! $has('output'))       $table->text('output')->nullable();
+            if (! $has('outcome'))      $table->text('outcome')->nullable();
         });
     }
 

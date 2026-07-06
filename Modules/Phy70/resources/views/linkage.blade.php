@@ -55,6 +55,10 @@
             display: inline-flex; align-items: center; gap: 6px; background: rgba(217,119,6,0.10);
             border: 1px solid rgba(217,119,6,0.25); color: var(--warning); padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 500;
         }
+        .live-badge {
+            display: inline-flex; align-items: center; gap: 6px; background: rgba(5,150,105,0.10);
+            border: 1px solid rgba(5,150,105,0.25); color: var(--success); padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 500;
+        }
 
         .glass-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; transition: var(--transition-smooth); box-shadow: var(--shadow-card); }
         .glass-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-hover); }
@@ -133,18 +137,20 @@
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <span class="mockup-badge">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    ข้อมูลจำลอง (Mockup)
+                <span class="live-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    ข้อมูลจริง · {{ number_format($kpi['proposals']) }} ข้อเสนอ
                 </span>
                 <a href="{{ route('phy70.dashboard') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
                     แดชบอร์ด
                 </a>
+                {{-- เมนูประเมินคุณภาพถูกปิดไว้ชั่วคราว
                 <a href="{{ route('phy70.scorecard') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                     ประเมินคุณภาพ
                 </a>
+                --}}
                 <a href="{{ route('phy70.index') }}" class="btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     กลับหน้าหลัก

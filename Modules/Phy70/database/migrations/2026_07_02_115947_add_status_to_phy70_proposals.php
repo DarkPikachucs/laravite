@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::connection('sqlite_phy70')->hasColumn('phy70_proposals', 'status')) {
+            return;
+        }
+
         Schema::table('phy70_proposals', function (Blueprint $table) {
             $table->string('status')->default('draft');
         });
