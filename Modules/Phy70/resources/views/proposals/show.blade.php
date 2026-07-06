@@ -212,24 +212,7 @@
               <span style="font-weight: 500; font-size: 13.5px; color: var(--text-main);">{{ $kpi['name'] }}</span>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 12px;">
-              @if(isset($kpi['targets']) && is_array($kpi['targets']) && isset($kpi['targets'][0]))
-              <div style="font-size: 13px;">
-                <span style="color: var(--text-muted);">ค่าเป้าหมาย:</span>
-                <span
-                  style="font-weight: 600; color: {{ $kpi['targets'][0] ? 'var(--text-main)' : 'rgba(255,255,255,0.2)' }};">
-                  {{ $kpi['targets'][0] ?: '-' }}
-                </span>
-              </div>
-              @endif
 
-              @if(isset($kpi['target_unit']) && $kpi['target_unit'])
-              <div
-                style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.04); padding: 2px 6px; border-radius: 4px;">
-                {{ $kpi['target_unit'] }}
-              </div>
-              @endif
-            </div>
           </div>
           @endif
           @endforeach

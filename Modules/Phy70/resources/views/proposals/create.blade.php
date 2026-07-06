@@ -332,16 +332,7 @@ if (empty($oldData) && $isEdit) {
                     <span style="font-size: 14px; font-weight: 500;" x-text="kpi.name"></span>
                     <input type="hidden" :name="'kpis['+index+'][name]'" :value="kpi.name">
                   </div>
-                  <div x-show="kpi.selected"
-                    style="padding-left: 34px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                      <span style="font-size: 12px; color: var(--text-muted);">ค่าเป้าหมาย</span>
-                      <input type="text" :name="'kpis['+index+'][targets][0]'" class="kpi-input" style="width: 150px;"
-                        x-model="kpi.targets[0]" placeholder="ระบุค่าเป้าหมาย" :required="kpi.selected">
-                    </div>
-                    <span style="font-size: 12px; color: var(--secondary);"
-                      x-text="'หน่วย: ' + (kpi.target_unit || 'ไม่ระบุ')"></span>
-                  </div>
+
                 </div>
               </template>
             </div>
