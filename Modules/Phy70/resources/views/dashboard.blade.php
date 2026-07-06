@@ -10,14 +10,31 @@
 
   @php
   // ---- Per-issue color + icon mapping (ประเด็นการพัฒนา) --------------
-  $issueMeta = [
-  'ยกระดับสุขภาวะและกิจกรรมทางกายของประชาชน' => ['color' => '#6366f1', 'bg' => 'rgba(99,102,241,0.12)', 'icon' =>
-  'activity'],
-  'พัฒนาการท่องเที่ยวเชิงสุขภาพและกีฬา' => ['color' => '#06b6d4', 'bg' => 'rgba(6,182,212,0.12)', 'icon' => 'mountain'],
-  'พัฒนาคุณภาพชีวิตผู้สูงอายุและกลุ่มเปราะบาง' => ['color' => '#10b981', 'bg' => 'rgba(16,185,129,0.12)', 'icon' =>
-  'heart'],
-  'ส่งเสริมพัฒนาการเด็กและเยาวชน' => ['color' => '#f59e0b', 'bg' => 'rgba(245,158,11,0.12)', 'icon' => 'child'],
+  // สร้างสีแบบ dynamic ให้ "ทุกประเด็น" มีสีของตัวเอง (ไม่ตกเป็นสีเทาเหมือนกันหมด)
+  $issuePalette = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#3b82f6', '#14b8a6',
+  '#f97316', '#8b5cf6', '#e11d48'];
+  $issueIconCycle = ['activity', 'mountain', 'heart', 'child', 'flag'];
+  $hexToRgba = fn($hex, $a = 0.12) => sprintf('rgba(%d,%d,%d,%s)', hexdec(substr(ltrim($hex, '#'), 0, 2)),
+  hexdec(substr(ltrim($hex, '#'), 2, 2)), hexdec(substr(ltrim($hex, '#'), 4, 2)), $a);
+  $pickIssueIcon = function ($name) {
+  if (preg_match('/ท่องเที่ยว|เที่ยว/u', $name)) return 'mountain';
+  if (preg_match('/สุขภาพ|สุขภาวะ|สาธารณสุข|การแพทย์|ผู้สูงอายุ|เปราะบาง/u', $name)) return 'heart';
+  if (preg_match('/เด็ก|เยาวชน|การศึกษา|เรียน/u', $name)) return 'child';
+  if (preg_match('/เกษตร|ผลิตภาพ|อุตสาหกรรม|เศรษฐกิจ|แปรรูป/u', $name)) return 'activity';
+  return null;
+  };
+  // เรียงประเด็นตามงบมาก→น้อยก่อน แล้วรวมประเด็นอื่นที่เหลือ เพื่อให้สีคงที่ทั้งหน้า
+  $issueOrder = $budgetByIssue->keys()->merge($projects->pluck('province_issue'))->filter(fn($v) => filled($v))
+  ->unique()->values();
+  $issueMeta = [];
+  foreach ($issueOrder as $idx => $isName) {
+  $col = $issuePalette[$idx % count($issuePalette)];
+  $issueMeta[$isName] = [
+  'color' => $col,
+  'bg' => $hexToRgba($col),
+  'icon' => $pickIssueIcon($isName) ?? $issueIconCycle[$idx % count($issueIconCycle)],
   ];
+  }
   $issueDefault = ['color' => '#64748b', 'bg' => 'rgba(100,116,139,0.12)', 'icon' => 'flag'];
   $issueCounts = $projects->groupBy('province_issue')->map->count();
   $maxIssueBudget = $budgetByIssue->max() ?: 1;
@@ -1132,13 +1149,13 @@
     <!-- Charts row: guideline + agency -->
     <div class="charts-grid">
       <div class="glass-card chart-card">
-        <h3 class="section-title" style="color: var(--secondary);">สัดส่วนงบประมาณตามแนวทางการพัฒนาจังหวัด</h3>
-        @if($budgetByGuideline->sum() <= 0) <div class="empty-state compact">
-          <div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามแนวทาง</div>
-          <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุแนวทางและงบประมาณ</div>
+        <h3 class="section-title" style="color: var(--secondary);">สัดส่วนงบประมาณตามประเด็นการพัฒนา</h3>
+        @if($budgetByIssue->sum() <= 0) <div class="empty-state compact">
+          <div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามประเด็น</div>
+          <div class="empty-desc">ยังไม่มีโครงการที่ระบุประเด็นการพัฒนาและงบประมาณ</div>
       </div>
       @else
-      <div class="chart-canvas-wrap"><canvas id="chartGuideline"></canvas></div>
+      <div class="chart-canvas-wrap"><canvas id="chartIssue"></canvas></div>
       @endif
     </div>
     <div class="glass-card chart-card">
@@ -1474,13 +1491,13 @@
         const surfaceBorder = '#ffffff';
         const bahtFmt = (v) => new Intl.NumberFormat('th-TH').format(v);
 
-        // Budget by guideline (doughnut)
-        @if($budgetByGuideline->sum() > 0)
-        new Chart(document.getElementById('chartGuideline'), {
+        // Budget by issue / ประเด็นการพัฒนา (doughnut) — สีตรงกับการ์ดประเด็นด้านบน
+        @if($budgetByIssue->sum() > 0)
+        new Chart(document.getElementById('chartIssue'), {
             type: 'doughnut',
             data: {
-                labels: @json($budgetByGuideline->keys()),
-                datasets: [{ data: @json($budgetByGuideline->values()), backgroundColor: palette, borderColor: surfaceBorder, borderWidth: 3 }]
+                labels: @json($budgetByIssue->keys()),
+                datasets: [{ data: @json($budgetByIssue->values()), backgroundColor: @json($budgetByIssue->keys()->map(fn($k) => $issueMeta[$k]['color'] ?? $issueDefault['color'])->values()), borderColor: surfaceBorder, borderWidth: 3 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false, cutout: '60%',
