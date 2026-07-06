@@ -420,6 +420,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
             </div>
           </div>
 
+
+
           <div class="form-group">
             <label class="form-label">หลักการและเหตุผล <span style="color: var(--danger);">*</span></label>
             <textarea name="principles" class="form-control" x-model="formData.principles" required></textarea>
@@ -484,24 +486,37 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 <input type="text" :name="'activities['+index+'][name]'" class="form-control" x-model="act.name"
                   required>
               </div>
-              <div class="grid-2-col">
-                <div class="form-group">
-                  <label class="form-label">งบประมาณ (บาท) <span style="color: var(--danger);">*</span></label>
-                  <input type="number" :name="'activities['+index+'][budget]'" class="form-control" x-model="act.budget"
-                    required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">แนวทางการพัฒนาจังหวัด <span style="color: var(--danger);">*</span></label>
-                  <select :name="'activities['+index+'][guideline]'" class="form-control" :value="act.guideline"
-                    @change="act.guideline = $event.target.value" required>
-                    <option value="">-- เลือกแนวทาง --</option>
-                    <template x-if="formData.province_issue && guidelinesData[formData.province_issue]">
-                      <template x-for="g in guidelinesData[formData.province_issue]" :key="g">
-                        <option :value="g" x-text="g" :selected="act.guideline === g"></option>
-                      </template>
+
+              <div class="form-group">
+                <label class="form-label">งบประมาณรวม (บาท) <span style="color: var(--danger);">*</span></label>
+                <input type="number" :name="'activities['+index+'][budget]'" class="form-control"
+                  :value="getActivityBudget(act)" readonly style="background-color: rgba(0,0,0,0.05); cursor: not-allowed;" required>
+                <div x-show="formData.operating_year" x-transition style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; text-align: center;">
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 8px; text-align: center; display: block;">แยกตามปีงบประมาณ</label>
+                  <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                    <template x-for="year in years.filter(y => y <= formData.operating_year)" :key="year">
+                      <div style="flex: 1; min-width: 100px; max-width: 140px;">
+                        <span style="font-size: 11px; color: var(--text-muted);" x-text="'ปี ' + year"></span>
+                        <input type="number" :name="'activities['+index+'][yearly_budgets]['+year+']'"
+                          class="form-control" style="padding: 6px 8px; font-size: 13px;"
+                          x-model="act.yearly_budgets[year]" placeholder="0" min="0">
+                      </div>
                     </template>
-                  </select>
+                  </div>
                 </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">แนวทางการพัฒนาจังหวัด <span style="color: var(--danger);">*</span></label>
+                <select :name="'activities['+index+'][guideline]'" class="form-control" :value="act.guideline"
+                  @change="act.guideline = $event.target.value" required>
+                  <option value="">-- เลือกแนวทาง --</option>
+                  <template x-if="formData.province_issue && guidelinesData[formData.province_issue]">
+                    <template x-for="g in guidelinesData[formData.province_issue]" :key="g">
+                      <option :value="g" x-text="g" :selected="act.guideline === g"></option>
+                    </template>
+                  </template>
+                </select>
               </div>
 
               <div class="form-group">
@@ -1001,6 +1016,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 phone_number: oldData.phone_number || '{{ auth("phy70")->check() ? auth("phy70")->user()->phone_number : "" }}',
                 output: oldData.output || '',
                 outcome: oldData.outcome || '',
+                yearly_budgets: oldData.yearly_budgets || {},
                 activities: oldData.activities ? Object.values(oldData.activities) : []
             },
             
@@ -1027,6 +1043,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                         } else {
                             act.target_district = [];
                         }
+                        if (!act.yearly_budgets) act.yearly_budgets = {};
 
                         if (act.target_subdistrict) {
                             let subdists = Array.isArray(act.target_subdistrict) ? act.target_subdistrict : [act.target_subdistrict];
@@ -1062,6 +1079,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 this.formData.activities.push({
                     name: '',
                     budget: '',
+                    yearly_budgets: {},
                     guideline: '',
                     target_province: 'เพชรบูรณ์',
                     target_district: [],
@@ -1120,8 +1138,19 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 }
             },
 
+            getActivityBudget(act) {
+                if (!this.formData.operating_year || !act.yearly_budgets) return 0;
+                let sum = 0;
+                for (const year of this.years) {
+                    if (year <= this.formData.operating_year && act.yearly_budgets[year]) {
+                        sum += Number(act.yearly_budgets[year]) || 0;
+                    }
+                }
+                return sum;
+            },
+
             get totalBudget() {
-                return this.formData.activities.reduce((sum, act) => sum + (Number(act.budget) || 0), 0);
+                return this.formData.activities.reduce((sum, act) => sum + this.getActivityBudget(act), 0);
             },
 
             validateSubmit(e, actionType) {

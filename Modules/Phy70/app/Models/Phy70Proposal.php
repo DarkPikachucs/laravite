@@ -38,6 +38,7 @@ class Phy70Proposal extends Model
         'activities',
         'status',
         'project_code',
+        'yearly_budgets',
     ];
 
     protected $casts = [
@@ -47,6 +48,7 @@ class Phy70Proposal extends Model
         'kpis' => 'array',
         'target_district' => 'array',
         'target_subdistrict' => 'array',
+        'yearly_budgets' => 'array',
     ];
 
     public function organization()

@@ -95,7 +95,11 @@ class Phy70SuperadminController extends Controller
         }
 
         $request->validate([
+            'documents' => 'nullable|array',
             'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,zip,rar|max:20480',
+            'yearly_budgets' => 'nullable|array',
+            'yearly_budgets.*' => 'nullable|numeric|min:0',
+            'activities' => 'nullable|array',
             'province_issue' => $req . '|string',
             'operating_year' => $req . '|string',
             'development_guideline' => 'nullable|string',
@@ -156,6 +160,7 @@ class Phy70SuperadminController extends Controller
             'position' => $request->position,
             'phone_number' => $request->phone_number,
             'documents' => $documents,
+            'yearly_budgets' => $request->yearly_budgets,
             'activities' => $request->activities,
             'status' => $request->input('status', $proposal->status),
         ]);

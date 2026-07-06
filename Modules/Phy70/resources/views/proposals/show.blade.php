@@ -271,9 +271,46 @@
       </div>
     </div>
     @endif
+    @php
+    $totalBudget = collect($proposal->activities)->sum(function($act) { return (float)($act['budget'] ?? 0); });
+    $totalYearlyBudgets = [];
+    if (!empty($proposal->activities)) {
+        foreach ($proposal->activities as $act) {
+            if (!empty($act['yearly_budgets']) && is_array($act['yearly_budgets'])) {
+                foreach ($act['yearly_budgets'] as $year => $budget) {
+                    if (is_numeric($budget)) {
+                        $totalYearlyBudgets[$year] = ($totalYearlyBudgets[$year] ?? 0) + (float)$budget;
+                    }
+                }
+            }
+        }
+    }
+    @endphp
 
-
-
+    <div class="info-item" style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1);">
+      <div class="info-label" style="font-size: 15px; font-weight: 600; color: var(--secondary); margin-bottom: 12px;">งบประมาณรวมทั้งโครงการ</div>
+      <div class="info-val" style="font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 16px;">
+        {{ number_format($totalBudget, 2) }} <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">บาท</span>
+      </div>
+      
+      @if(!empty($totalYearlyBudgets))
+      <div style="padding: 16px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">งบประมาณรวมแยกตามปีงบประมาณ</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
+          @foreach($years as $year)
+            @if($year <= $operatingYear && isset($totalYearlyBudgets[$year]))
+            <div style="flex: 1; min-width: 100px; max-width: 150px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">ปี {{ $year }}</div>
+              <div style="font-weight: 600; font-size: 15px; color: var(--primary);">
+                {{ number_format($totalYearlyBudgets[$year], 2) }}
+              </div>
+            </div>
+            @endif
+          @endforeach
+        </div>
+      </div>
+      @endif
+    </div>
     @if($proposal->attachments && count($proposal->attachments) > 0)
     <div class="info-item"
       style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px;">
@@ -322,144 +359,162 @@
         🎯 กิจกรรมที่ {{ $index + 1 }}: {{ $act['name'] ?? '-' }}
       </h4>
 
-      <div class="info-grid">
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">งบประมาณ (บาท)</div>
-          <div class="info-val">{{ number_format($act['budget'] ?? 0, 2) }}</div>
-        </div>
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">แนวทางการพัฒนาจังหวัด</div>
-          <div class="info-val">{{ $act['guideline'] ?? '-' }}</div>
-        </div>
-      </div>
-
-      <div class="info-grid">
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">พื้นที่เป้าหมาย</div>
-          <div class="info-val">
-            @if(isset($act['target_province']) || !empty($act['target_district']) || !empty($act['target_subdistrict']))
-            จังหวัด{{ $act['target_province'] ?? $proposal->target_province ?? 'เพชรบูรณ์' }}
-            @php
-            $rawDistricts = !empty($act['target_district']) ? (is_array($act['target_district']) ?
-            $act['target_district'] : explode(',', $act['target_district'])) : [];
-            $rawSubdistricts = !empty($act['target_subdistrict']) ? (is_array($act['target_subdistrict']) ?
-            $act['target_subdistrict'] : explode(',', $act['target_subdistrict'])) : [];
-
-            $selectedDistricts = collect($rawDistricts)->flatMap(fn($d) => explode(',', $d))->map(fn($d) =>
-            trim($d))->filter()->unique()->values()->all();
-            $selectedSubdistricts = collect($rawSubdistricts)->flatMap(fn($d) => explode(',', $d))->map(fn($d) =>
-            trim($d))->filter()->unique()->values()->all();
-            @endphp
-            @if(count($selectedDistricts) > 0)
-            <div style="margin-top: 8px; padding-left: 10px; display: flex; flex-direction: column; gap: 4px;">
-              @foreach($selectedDistricts as $dist)
-              <div>
-                <span style="color: var(--primary);">➔ อำเภอ{{ $dist }}</span>
-                @php
-                $subsInThisDist = [];
-                if (isset($addressData[$dist])) {
-                $subsInThisDist = array_intersect($selectedSubdistricts, $addressData[$dist]);
-                }
-                @endphp
-                @if(count($subsInThisDist) > 0)
-                <span style="color: var(--text-muted); font-size: 13px; margin-left: 6px;">
-                  (ตำบล: {{ implode(', ', $subsInThisDist) }})
-                </span>
-                @endif
-              </div>
-              @endforeach
-            </div>
-            @endif
-            @else
-            {{ $act['target_area'] ?? '-' }}
-            @endif
-          </div>
-        </div>
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">กลุ่มเป้าหมาย</div>
-          <div class="info-val">{{ $act['target_group'] ?? '-' }}</div>
-        </div>
-      </div>
-
-      <div class="info-grid">
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">ผู้รับผิดชอบ</div>
-          <div class="info-val">{{ $act['responsible_person'] ?? '-' }}</div>
-        </div>
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">หน่วยงานรับผิดชอบ</div>
-          <div class="info-val">{{ $act['responsible_agency'] ?? '-' }}</div>
-        </div>
-      </div>
-
       <div class="info-item" style="margin-bottom: 12px;">
-        <div class="info-label">หน่วยงานที่เกี่ยวข้อง</div>
+        <div class="info-label">งบประมาณรวม (บาท)</div>
+        <div class="info-val" style="margin-bottom: 12px;">{{ number_format($act['budget'] ?? 0, 2) }}</div>
+        @if(!empty($act['yearly_budgets']) && is_array($act['yearly_budgets']))
+        <div
+          style="padding: 12px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;">แยกตามปีงบประมาณ
+          </div>
+          <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+            @foreach($years as $year)
+            @if($year <= $operatingYear && isset($act['yearly_budgets'][$year]) &&
+              is_numeric($act['yearly_budgets'][$year])) <div style="flex: 1; min-width: 80px; max-width: 120px;">
+              <div style="font-size: 11px; color: var(--text-muted);">ปี {{ $year }}</div>
+              <div style="font-weight: 500; font-size: 13px; color: var(--primary);">
+                {{ number_format($act['yearly_budgets'][$year], 2) }}
+              </div>
+          </div>
+          @endif
+          @endforeach
+        </div>
+      </div>
+      @endif
+    </div>
+    <div class="info-item" style="margin-bottom: 12px;">
+      <div class="info-label">แนวทางการพัฒนาจังหวัด</div>
+      <div class="info-val">{{ $act['guideline'] ?? '-' }}</div>
+    </div>
+
+
+    <div class="info-grid">
+      <div class="info-item" style="margin-bottom: 12px;">
+        <div class="info-label">พื้นที่เป้าหมาย</div>
         <div class="info-val">
-          @if(!empty($act['co_agencies']) && is_array($act['co_agencies']))
-          <ul style="margin: 0; padding-left: 20px;">
-            @foreach($act['co_agencies'] as $co)
-            @if(!empty($co['name']))
-            <li>{{ $co['name'] }}</li>
-            @endif
+          @if(isset($act['target_province']) || !empty($act['target_district']) || !empty($act['target_subdistrict']))
+          จังหวัด{{ $act['target_province'] ?? $proposal->target_province ?? 'เพชรบูรณ์' }}
+          @php
+          $rawDistricts = !empty($act['target_district']) ? (is_array($act['target_district']) ?
+          $act['target_district'] : explode(',', $act['target_district'])) : [];
+          $rawSubdistricts = !empty($act['target_subdistrict']) ? (is_array($act['target_subdistrict']) ?
+          $act['target_subdistrict'] : explode(',', $act['target_subdistrict'])) : [];
+
+          $selectedDistricts = collect($rawDistricts)->flatMap(fn($d) => explode(',', $d))->map(fn($d) =>
+          trim($d))->filter()->unique()->values()->all();
+          $selectedSubdistricts = collect($rawSubdistricts)->flatMap(fn($d) => explode(',', $d))->map(fn($d) =>
+          trim($d))->filter()->unique()->values()->all();
+          @endphp
+          @if(count($selectedDistricts) > 0)
+          <div style="margin-top: 8px; padding-left: 10px; display: flex; flex-direction: column; gap: 4px;">
+            @foreach($selectedDistricts as $dist)
+            <div>
+              <span style="color: var(--primary);">➔ อำเภอ{{ $dist }}</span>
+              @php
+              $subsInThisDist = [];
+              if (isset($addressData[$dist])) {
+              $subsInThisDist = array_intersect($selectedSubdistricts, $addressData[$dist]);
+              }
+              @endphp
+              @if(count($subsInThisDist) > 0)
+              <span style="color: var(--text-muted); font-size: 13px; margin-left: 6px;">
+                (ตำบล: {{ implode(', ', $subsInThisDist) }})
+              </span>
+              @endif
+            </div>
             @endforeach
-          </ul>
+          </div>
+          @endif
           @else
-          -
+          {{ $act['target_area'] ?? '-' }}
           @endif
         </div>
       </div>
+      <div class="info-item" style="margin-bottom: 12px;">
+        <div class="info-label">กลุ่มเป้าหมาย</div>
+        <div class="info-val">{{ $act['target_group'] ?? '-' }}</div>
+      </div>
+    </div>
 
-      <div class="info-grid">
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">🎯 ตัวชี้วัดโครงการที่กิจกรรมนี้ตอบสนอง</div>
-          <div class="info-val">
-            @if(!empty($act['project_kpis']) && is_array($act['project_kpis']))
-            <ul style="margin: 0; padding-left: 20px;">
-              @foreach($act['project_kpis'] as $pkpi)
-              <li>{{ $pkpi }}</li>
-              @endforeach
-            </ul>
-            @else
-            {{ is_string($act['project_kpis'] ?? null) ? $act['project_kpis'] : '-' }}
-            @endif
-          </div>
-        </div>
-        <div class="info-item" style="margin-bottom: 12px;">
-          <div class="info-label">ตัวชี้วัดของกิจกรรม</div>
-          <div class="info-val">
-            @if(!empty($act['activity_kpis']) && is_array($act['activity_kpis']))
-            <table class="table" style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px;">
-              <thead>
-                <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
-                  <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500;">ชื่อตัวชี้วัด
-                  </th>
-                  <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500; width: 25%;">
-                    ค่าเป้าหมาย</th>
-                  <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500; width: 25%;">
-                    หน่วยวัด</th>
-                </tr>
-              </thead>
-              <tbody>
-                @foreach($act['activity_kpis'] as $akpi)
-                @if(!empty($akpi['name']))
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                  <td style="padding: 8px;">{{ $akpi['name'] }}</td>
-                  <td style="padding: 8px;">{{ $akpi['target'] ?? '-' }}</td>
-                  <td style="padding: 8px;">{{ $akpi['unit'] ?? '-' }}</td>
-                </tr>
-                @endif
-                @endforeach
-              </tbody>
-            </table>
-            @else
-            {{ is_string($act['activity_kpis'] ?? null) ? $act['activity_kpis'] : '-' }}
-            @endif
-          </div>
+    <div class="info-grid">
+      <div class="info-item" style="margin-bottom: 12px;">
+        <div class="info-label">ผู้รับผิดชอบ</div>
+        <div class="info-val">{{ $act['responsible_person'] ?? '-' }}</div>
+      </div>
+      <div class="info-item" style="margin-bottom: 12px;">
+        <div class="info-label">หน่วยงานรับผิดชอบ</div>
+        <div class="info-val">{{ $act['responsible_agency'] ?? '-' }}</div>
+      </div>
+    </div>
+
+    <div class="info-item" style="margin-bottom: 12px;">
+      <div class="info-label">หน่วยงานที่เกี่ยวข้อง</div>
+      <div class="info-val">
+        @if(!empty($act['co_agencies']) && is_array($act['co_agencies']))
+        <ul style="margin: 0; padding-left: 20px;">
+          @foreach($act['co_agencies'] as $co)
+          @if(!empty($co['name']))
+          <li>{{ $co['name'] }}</li>
+          @endif
+          @endforeach
+        </ul>
+        @else
+        -
+        @endif
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item" style="margin-bottom: 12px;">
+        <div class="info-label">ตัวชี้วัดโครงการที่กิจกรรมนี้ตอบสนอง</div>
+        <div class="info-val">
+          @if(!empty($act['project_kpis']) && is_array($act['project_kpis']))
+          <ul style="margin: 0; padding-left: 20px;">
+            @foreach($act['project_kpis'] as $pkpi)
+            <li>{{ $pkpi }}</li>
+            @endforeach
+          </ul>
+          @else
+          {{ is_string($act['project_kpis'] ?? null) ? $act['project_kpis'] : '-' }}
+          @endif
         </div>
       </div>
-
+      <div class="info-item" style="margin-bottom: 12px;">
+        <div class="info-label">ตัวชี้วัดของกิจกรรม</div>
+        <div class="info-val">
+          @if(!empty($act['activity_kpis']) && is_array($act['activity_kpis']))
+          <table class="table" style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px;">
+            <thead>
+              <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500;">ชื่อตัวชี้วัด
+                </th>
+                <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500; width: 25%;">
+                  ค่าเป้าหมาย</th>
+                <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500; width: 25%;">
+                  หน่วยวัด</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach($act['activity_kpis'] as $akpi)
+              @if(!empty($akpi['name']))
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 8px;">{{ $akpi['name'] }}</td>
+                <td style="padding: 8px;">{{ $akpi['target'] ?? '-' }}</td>
+                <td style="padding: 8px;">{{ $akpi['unit'] ?? '-' }}</td>
+              </tr>
+              @endif
+              @endforeach
+            </tbody>
+          </table>
+          @else
+          {{ is_string($act['activity_kpis'] ?? null) ? $act['activity_kpis'] : '-' }}
+          @endif
+        </div>
+      </div>
     </div>
-    @endforeach
+
+  </div>
+  @endforeach
   </div>
   @endif
 
