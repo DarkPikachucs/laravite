@@ -496,7 +496,7 @@
 
         <!-- Google Link Linkage -->
         <div class="glass-card"
-          style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);">
+          style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%); display:none;">
           <h3 class="section-title" style="color: var(--secondary); margin-bottom: 12px;">
             Google Login Link
           </h3>

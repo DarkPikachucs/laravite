@@ -15,14 +15,13 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
 <datalist id="organizationList">
   @foreach($orgList as $orgName)
   <option value="{{ $orgName }}">
-  @endforeach
+    @endforeach
 </datalist>
 
 <x-phy70::layouts.master>
   <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 
   <style>
     :root {
@@ -255,11 +254,19 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
     :root.light-theme .kpi-box {
       background: rgba(0, 0, 0, 0.03);
     }
-    
+
     .timeline-dot {
-      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-      background: var(--bg-base); border: 2px solid rgba(148, 163, 184, 0.4);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      background: var(--bg-base);
+      border: 2px solid rgba(148, 163, 184, 0.4);
     }
+
     :root.light-theme .timeline-dot {
       background: #f8fafc;
     }
@@ -343,7 +350,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
     @endif
 
     <div class="glass-card">
-      <form action="{{ $route }}" method="POST" id="proposal-form" enctype="multipart/form-data" @keydown.enter="$event.target.tagName !== 'TEXTAREA' ? $event.preventDefault() : null">
+      <form action="{{ $route }}" method="POST" id="proposal-form" enctype="multipart/form-data"
+        @keydown.enter="$event.target.tagName !== 'TEXTAREA' ? $event.preventDefault() : null">
         @csrf
         @if($isEdit) @method('PUT') @endif
 
@@ -358,8 +366,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
 
           <div class="form-group">
             <label class="form-label">ประเด็นการพัฒนาของจังหวัด <span style="color: var(--danger);">*</span></label>
-            <select name="province_issue" class="form-control" :value="formData.province_issue" @change="formData.province_issue = $event.target.value; onIssueChange()"
-              required>
+            <select name="province_issue" class="form-control" :value="formData.province_issue"
+              @change="formData.province_issue = $event.target.value; onIssueChange()" required>
               <option value="">-- เลือกประเด็นการพัฒนา --</option>
               <template x-for="(issue, index) in issuesData" :key="index">
                 <option :value="issue.issue" x-text="issue.issue" :selected="issue.issue === formData.province_issue">
@@ -369,43 +377,43 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
           </div>
 
           <div class="form-group">
-            <label class="form-label">ระยะเวลาดำเนินงาน (ปี พ.ศ.) <span style="color: var(--danger);">*</span></label>
+            <label class="form-label">ระยะเวลาดำเนินงาน (ปีงบประมาณ) <span
+                style="color: var(--danger);">*</span></label>
             <input type="text" name="operating_year" x-model="formData.operating_year" style="display: none;">
-            <div style="position: relative; margin-top: 16px; padding-bottom: 28px; width: 100%; max-width: 600px;">
+            <div
+              style="position: relative; margin: 16px auto 0 auto; padding-bottom: 28px; width: 100%; max-width: 600px;">
               <!-- Background line -->
-              <div style="position: absolute; top: 12px; left: 0; width: 100%; height: 4px; background: rgba(148, 163, 184, 0.2); z-index: 0; border-radius: 2px;"></div>
-              
+              <div
+                style="position: absolute; top: 12px; left: 0; width: 100%; height: 4px; background: rgba(148, 163, 184, 0.2); z-index: 0; border-radius: 2px;">
+              </div>
+
               <!-- Foreground (Active) line -->
-              <div style="position: absolute; top: 12px; left: 0; height: 4px; background: var(--primary); z-index: 1; border-radius: 2px; transition: width 0.3s ease;"
-                   :style="'width: ' + ((hoverYear ? years.indexOf(hoverYear) : (formData.operating_year ? years.indexOf(formData.operating_year) : 0)) / (years.length - 1) * 100) + '%;'"
-              ></div>
+              <div
+                style="position: absolute; top: 12px; left: 0; height: 4px; background: var(--primary); z-index: 1; border-radius: 2px; transition: width 0.3s ease;"
+                :style="'width: ' + ((hoverYear ? years.indexOf(hoverYear) : (formData.operating_year ? years.indexOf(formData.operating_year) : 0)) / (years.length - 1) * 100) + '%;'">
+              </div>
 
               <!-- Nodes -->
               <div style="display: flex; justify-content: space-between; position: relative; z-index: 2;">
                 <template x-for="year in years" :key="year">
-                  <div 
+                  <div
                     style="display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative;"
-                    @mouseenter="hoverYear = year"
-                    @mouseleave="hoverYear = null"
-                    @click="formData.operating_year = year"
-                  >
+                    @mouseenter="hoverYear = year" @mouseleave="hoverYear = null"
+                    @click="formData.operating_year = year">
                     <!-- Dot -->
-                    <div 
-                      class="timeline-dot"
-                      :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'background: var(--primary); box-shadow: 0 0 12px var(--primary-glow); border-color: var(--primary);' : ''"
-                    >
-                      <div 
+                    <div class="timeline-dot"
+                      :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'background: var(--primary); box-shadow: 0 0 12px var(--primary-glow); border-color: var(--primary);' : ''">
+                      <div
                         style="width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: opacity 0.2s;"
-                        :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'opacity: 1;' : 'opacity: 0;'"
-                      ></div>
+                        :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'opacity: 1;' : 'opacity: 0;'">
+                      </div>
                     </div>
-                    
+
                     <!-- Label -->
-                    <span 
+                    <span
                       style="font-size: 13px; font-weight: 600; position: absolute; top: 34px; white-space: nowrap; transition: color 0.2s;"
                       :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'color: var(--primary);' : 'color: var(--text-muted);'"
-                      x-text="'ปี ' + year"
-                    ></span>
+                      x-text="'ปี ' + year"></span>
                   </div>
                 </template>
               </div>
@@ -484,8 +492,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 </div>
                 <div class="form-group">
                   <label class="form-label">แนวทางการพัฒนาจังหวัด <span style="color: var(--danger);">*</span></label>
-                  <select :name="'activities['+index+'][guideline]'" class="form-control" :value="act.guideline" @change="act.guideline = $event.target.value"
-                    required>
+                  <select :name="'activities['+index+'][guideline]'" class="form-control" :value="act.guideline"
+                    @change="act.guideline = $event.target.value" required>
                     <option value="">-- เลือกแนวทาง --</option>
                     <template x-if="formData.province_issue && guidelinesData[formData.province_issue]">
                       <template x-for="g in guidelinesData[formData.province_issue]" :key="g">
@@ -575,7 +583,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
               </div>
 
               <div class="form-group">
-                <label class="form-label">ตัวชี้วัดโครงการที่กิจกรรมนี้ตอบสนอง</label>
+                <label class="form-label">ตัวชี้วัดโครงการที่กิจกรรมตอบสนองต่อประเด็นพัฒนา</label>
                 <div class="kpi-box" style="margin-top: 0;">
                   <template x-for="(kpi, kIndex) in currentKPIs.filter(k => k.selected)" :key="kpi.name">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
@@ -593,34 +601,49 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
 
               <div class="form-group" style="margin-top: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <label class="form-label" style="margin-bottom: 0;">ตัวชี้วัดของกิจกรรม <span style="color: var(--danger);">*</span></label>
+                  <label class="form-label" style="margin-bottom: 0;">ตัวชี้วัดของกิจกรรม <span
+                      style="color: var(--danger);">*</span></label>
                   <button type="button" @click="act.activity_kpis.push({name: '', target: '', unit: ''})"
                     style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 13px;">+
                     เพิ่มตัวชี้วัด</button>
                 </div>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
+                <table
+                  style="width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
                   <thead>
                     <tr style="background: rgba(255,255,255,0.05); text-align: left;">
-                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);">ชื่อตัวชี้วัด</th>
-                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 20%;">ค่าเป้าหมาย</th>
-                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 20%;">หน่วยวัด</th>
-                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 40px;"></th>
+                      <th
+                        style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);">
+                        ชื่อตัวชี้วัด</th>
+                      <th
+                        style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 20%;">
+                        ค่าเป้าหมาย</th>
+                      <th
+                        style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 20%;">
+                        หน่วยวัด</th>
+                      <th
+                        style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 40px;">
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <template x-for="(akpi, akIndex) in act.activity_kpis" :key="akIndex">
                       <tr>
                         <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][name]'" class="form-control" x-model="akpi.name" placeholder="ชื่อตัวชี้วัด" required>
+                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][name]'"
+                            class="form-control" x-model="akpi.name" placeholder="ชื่อตัวชี้วัด" required>
                         </td>
                         <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][target]'" class="form-control" x-model="akpi.target" placeholder="เป้าหมาย" required>
+                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][target]'"
+                            class="form-control" x-model="akpi.target" placeholder="เป้าหมาย" required>
                         </td>
                         <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][unit]'" class="form-control" x-model="akpi.unit" placeholder="หน่วย" required>
+                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][unit]'"
+                            class="form-control" x-model="akpi.unit" placeholder="หน่วย" required>
                         </td>
                         <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                          <button type="button" @click="act.activity_kpis.splice(akIndex, 1)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;" x-show="act.activity_kpis.length > 1">✕</button>
+                          <button type="button" @click="act.activity_kpis.splice(akIndex, 1)"
+                            style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;"
+                            x-show="act.activity_kpis.length > 1">✕</button>
                         </td>
                       </tr>
                     </template>
@@ -654,11 +677,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
           <h3 class="section-title">ส่วนที่ 4: เอกสารโครงการ</h3>
           <div class="form-group" x-data="{ isDropping: false, files: [] }">
             <!-- สร้าง hint: แบบ จ.1-1, แบบฟอร์มข้อมูลพื้นฐานโครงการ -->
-            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">
-              <strong>หมายเหตุ:</strong> กรุณาแนบเอกสารโครงการอย่างน้อย 2 ไฟล์ (เช่น แบบ จ.1-1,
-              แบบฟอร์มข้อมูลพื้นฐานโครงการ)
-            </div>
-            <label class="form-label">เอกสารแนบ (อย่างน้อย 2 ไฟล์) <span style="color: var(--danger);">*</span></label>
+            <label class="form-label">เอกสารแนบ (แบบฟอร์ม จ.1-1 / แบบฟอร์มข้อมูลพื้นฐานโครงการ) <span
+                style="color: var(--danger);">*</span></label>
 
             <style>
               .drag-drop-zone {
@@ -1029,6 +1049,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                         } else {
                             act.target_subdistrict = [];
                         }
+
+                        act.project_kpis = Array.isArray(act.project_kpis) ? act.project_kpis : (act.project_kpis ? [act.project_kpis] : []);
                     });
                 }
 
@@ -1121,12 +1143,12 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 if (actionType !== 'draft') {
                     if (!this.formData.operating_year) {
                         e.preventDefault();
-                        alert('กรุณาระบุระยะเวลาดำเนินงาน (ปี พ.ศ.)');
+                        alert('กรุณาระบุระยะเวลาดำเนินงาน (ปีงบประมาณ)');
                         return;
                     }
                     if (this.totalBudget < 500000) {
                         e.preventDefault();
-                        alert('ไม่สามารถส่งข้อเสนอโครงการได้ เนืองจากงบประมาณรวม (' + this.totalBudget.toLocaleString() + ' บาท) ต่ำกว่า 500,000 บาท');
+                        alert('ไม่สามารถส่งข้อเสนอโครงการได้ เนื่องจากงบประมาณรวม (' + this.totalBudget.toLocaleString() + ' บาท) ต่ำกว่า 500,000 บาท');
                         return;
                     }
                 }
