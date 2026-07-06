@@ -341,6 +341,11 @@ class Phy70Controller extends Controller
         return redirect('/app/phy70/proposal/' . $proposal->id)->with('success', $msg);
     }
 
+    public function manual()
+    {
+        return view('phy70::manual');
+    }
+
     /**
      * Executive dashboard — summarises project & activity data for an
      * at-a-glance overview. Reads live proposals from the database; sections
