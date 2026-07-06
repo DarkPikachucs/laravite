@@ -12,11 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('phy70_proposals', function (Blueprint $table) {
-            foreach (['national_strategy', 'master_plan', 'national_plan', 'regional_development'] as $column) {
-                if (Schema::hasColumn('phy70_proposals', $column)) {
-                    $table->dropColumn($column);
-                }
-            }
+            $table->string('operating_year')->nullable();
         });
     }
 
@@ -26,10 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('phy70_proposals', function (Blueprint $table) {
-            $table->string('national_strategy')->nullable();
-            $table->string('master_plan')->nullable();
-            $table->string('national_plan')->nullable();
-            $table->string('regional_development')->nullable();
+            $table->dropColumn('operating_year');
         });
     }
 };

@@ -7,7 +7,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-  <title>PHY Project - {{ config('app.name', 'Laravel') }}</title>
+  <title>Phetchabun Project - {{ config('app.name', 'Laravel') }}</title>
 
   <meta name="description" content="{{ $description ?? '' }}">
   <meta name="keywords" content="{{ $keywords ?? '' }}">
@@ -280,8 +280,7 @@
       background: rgba(0, 0, 0, 0.08) !important;
     }
 
-    :root.light-theme .form-control,
-    :root.light-theme .status-badge {
+    :root.light-theme .form-control {
       background: rgba(255, 255, 255, 0.6) !important;
       border-color: rgba(0, 0, 0, 0.1) !important;
       color: var(--text-main) !important;

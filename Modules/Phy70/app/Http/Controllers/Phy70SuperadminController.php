@@ -97,6 +97,7 @@ class Phy70SuperadminController extends Controller
         $request->validate([
             'documents.*' => 'file|mimes:pdf,doc,docx,xls,xlsx,zip,rar|max:20480',
             'province_issue' => $req . '|string',
+            'operating_year' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
             'plan' => 'nullable|string',
@@ -135,6 +136,7 @@ class Phy70SuperadminController extends Controller
 
         $proposal->update([
             'province_issue' => $request->province_issue,
+            'operating_year' => $request->operating_year,
             'development_guideline' => $request->development_guideline,
             'main_plan' => $request->main_plan,
             'plan' => $request->plan,

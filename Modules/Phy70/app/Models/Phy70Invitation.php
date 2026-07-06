@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Phy70Invitation extends Model
 {
-    protected $connection = 'sqlite_phy70';
+    
     protected $table = 'phy70_invitations';
 
     protected $fillable = [

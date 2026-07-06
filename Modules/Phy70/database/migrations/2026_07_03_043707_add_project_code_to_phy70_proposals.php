@@ -6,13 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    protected $connection = 'sqlite_phy70';
+    
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        if (Schema::connection('sqlite_phy70')->hasColumn('phy70_proposals', 'project_code')) {
+        if (Schema::hasColumn('phy70_proposals', 'project_code')) {
             return;
         }
 

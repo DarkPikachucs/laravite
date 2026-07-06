@@ -90,7 +90,7 @@
 
     /* Container & Layout */
     .dashboard-container {
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 40px 24px;
       position: relative;
@@ -424,6 +424,26 @@
       color: var(--secondary);
     }
 
+    .status-warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+    }
+
+    :root.light-theme .status-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #047857;
+    }
+
+    :root.light-theme .status-info {
+      background: rgba(6, 182, 212, 0.2);
+      color: #0e7490;
+    }
+
+    :root.light-theme .status-warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #b45309;
+    }
+
     /* Alerts */
     .alert {
       padding: 16px 20px;
@@ -480,7 +500,7 @@
           </svg>
         </div>
         <div>
-          <h1 class="logo-title">PHY70 Portal</h1>
+          <h1 class="logo-title">Phetchabun Portal</h1>
           <span class="logo-subtitle">ระบบเสนอโครงการสำคัญภายใต้งบประมาณจังหวัดเพชรบูรณ์ ปี 2571-2575</span>
         </div>
       </div>
@@ -511,23 +531,24 @@
     <!-- Welcome Banner -->
     <div class="glass-card welcome-banner">
       <div class="welcome-text">
-        <h2 class="welcome-title">ระบบจัดทำและเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2571-2575 (PHY)</h2>
+        <h2 class="welcome-title">ระบบจัดทำและเสนอโครงการจังหวัดเพชรบูรณ์ ปีงบประมาณ 2571-2575</h2>
         <p class="welcome-desc">
-          ยินดีต้อนรับสู่ระบบส่งข้อเสนอโครงการสำคัญในการขับเคลื่อนเชิงยุทธศาสตร์ จังหวัดเพชรบูรณ์ประจำปีงบประมาณ พ.ศ.
-          2571-2575 (PHY)
+          ยินดีต้อนรับสู่ระบบส่งข้อเสนอโครงการสำคัญในการขับเคลื่อนเชิงยุทธศาสตร์ จังหวัดเพชรบูรณ์ประจำปีงบประมาณ
+          พ.ศ.2571-2575
         </p>
       </div>
       <div class="welcome-actions">
         @if($user)
         @if($user->role === 'superadmin')
-        <a href="{{ route('phy70.superadmin.index') }}" class="btn-secondary" style="border-color: rgba(99, 102, 241, 0.4); color: var(--primary);">
+        <a href="{{ route('phy70.superadmin.index') }}" class="btn-secondary"
+          style="border-color: rgba(99, 102, 241, 0.4); color: var(--primary);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
           จัดการระบบ (Superadmin)
         </a>
         @endif
-        
+
         <a href="{{ route('phy70.proposal.create') }}" class="btn-action">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -535,7 +556,7 @@
           </svg>
           ส่งข้อเสนอโครงการ
         </a>
-        
+
         @if(in_array($user->role, ['admin', 'superadmin']))
         <a href="{{ route('phy70.users') }}" class="btn-secondary">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -605,7 +626,7 @@
                 <td>{{ $proposal->responsible_person }}</td>
                 <td>{{ $proposal->phone_number }}</td>
                 <td style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">{{
-                  $proposal->created_at->format('Y-m-d H:i') }}</td>
+                  $proposal->created_at->timezone('Asia/Bangkok')->addYears(543)->format('d/m/Y H:i') }} น.</td>
                 <td>
                   @if($proposal->status === 'draft')
                   <span class="status-badge status-warning">แบบร่าง</span>
@@ -671,17 +692,19 @@
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
-            คำชี้แจงระบบยุทธศาสตร์
+            คำชี้แจงการใช้งานระบบเสนอโครงการ
           </h3>
           <p style="font-size: 13.5px; line-height: 1.6; color: var(--text-muted); margin-bottom: 12px;">
-            การส่งโครงการจะแบ่งออกเป็น 3 ส่วนสำคัญ โดยระบบจะบังคับให้ท่านทำตามลำดับเพื่อความสอดคล้องเชิงนโยบาย:
+            ระบบนี้ถูกออกแบบมาเพื่อให้หน่วยงานต่าง ๆ ในจังหวัดเพชรบูรณ์สามารถจัดทำและส่งข้อเสนอโครงการสำคัญ
+            ภายใต้งบประมาณจังหวัดเพชรบูรณ์ ปีงบประมาณ 2571-2575 ได้อย่างมีประสิทธิภาพ โดยมีขั้นตอนการใช้งานดังนี้:
           </p>
           <ul
             style="font-size: 13px; color: var(--text-muted); padding-left: 20px; display: flex; flex-direction: column; gap: 8px;">
-            <li><strong>ส่วนที่ 1:</strong> การเทียบเคียงเป้าหมายแผนระดับชาติ (ยุทธศาสตร์ชาติ, แผนพัฒนาฯ, ทิศทางภาค)
+            <li><strong>ขั้นตอน 1:</strong> การลงทะเบียนหน่วยงานและผู้ประสานงาน (ชื่อ-นามสกุล, เบอร์โทร, อีเมล)
+              และรหัสผ่านสำหรับเข้าสู่ระบบ หรือการสร้างคำเชิญให้ผู้ประสานงานของหน่วยงาน
             </li>
-            <li><strong>ส่วนที่ 2:</strong> ความสอดคล้องระดับจังหวัด (แผนพัฒนาจังหวัด, แผนงานหลัก)</li>
-            <li><strong>ส่วนที่ 3:</strong> รายละเอียดตัวโครงการจริง (ชื่อโครงการ, กิจกรรม, ข้อมูลผู้ติดต่อประสานงาน)
+            <li><strong>ขั้นตอน 2:</strong> การสร้างข้อเสนอโครงการและความสอดคล้องระดับจังหวัด</li>
+            <li><strong>ขั้นตอน 3:</strong> รายละเอียดตัวโครงการจริง (ชื่อโครงการ, กิจกรรม)
             </li>
           </ul>
         </div>

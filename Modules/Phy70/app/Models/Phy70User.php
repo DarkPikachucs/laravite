@@ -10,7 +10,7 @@ class Phy70User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $connection = 'sqlite_phy70';
+    
     protected $table = 'phy70_users';
 
     protected $fillable = [

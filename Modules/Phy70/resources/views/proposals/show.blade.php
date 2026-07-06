@@ -169,8 +169,7 @@
       <div style="font-size: 13.5px; color: var(--text-muted); display: flex; gap: 20px; flex-wrap: wrap;">
         <span>หน่วยงานเสนอ: <strong>{{ $proposal->organization->name }}</strong></span>
         <span>ผู้จัดส่งข้อเสนอ: <strong>{{ $proposal->user->name }}</strong></span>
-        <span>ส่งวันที่: <strong style="font-family: monospace;">{{ $proposal->created_at->format('Y-m-d H:i')
-            }}</strong></span>
+        <span>ส่งวันที่: <strong style="font-family: monospace;">{{ $proposal->created_at->timezone('Asia/Bangkok')->addYears(543)->format('d/m/Y H:i') }} น.</strong></span>
       </div>
     </div>
 
@@ -182,6 +181,11 @@
       <div class="info-item">
         <div class="info-label">ประเด็นการพัฒนาของจังหวัด</div>
         <div class="info-val">{{ $proposal->province_issue ?: 'ไม่ระบุข้อมูล' }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">ระยะเวลาดำเนินงาน (ปี พ.ศ.)</div>
+        <div class="info-val">{{ $proposal->operating_year ? 'ปี '.$proposal->operating_year : 'ไม่ระบุข้อมูล' }}</div>
       </div>
 
       <div class="info-item">
@@ -239,6 +243,21 @@
     </div>
 
     @if($proposal->activities && count($proposal->activities) > 0)
+    @php
+        $addressData = [
+            "เมืองเพชรบูรณ์" => ["ในเมือง", "ตะเบาะ", "วังชมภู", "ตาดกลอย", "บ้านโตก", "ชอนไพร", "นาป่า", "นายม", "น้ำร้อน", "สะเดียง", "ท่าพล", "ดงมูลเหล็ก", "บ้านโคก", "ห้วยใหญ่", "ห้วยสะแก", "ระวิง"],
+            "ชนแดน" => ["ชนแดน", "ดงขุย", "ท่าข้าม", "พุทธบาท", "ลาดแค", "บ้านกล้วย", "ซับพุทรา", "ตะกุดไร", "ศาลาลาย"],
+            "หล่มสัก" => ["หล่มสัก", "วัดป่า", "ตาลเดี่ยว", "หนองสว่าง", "บ้านติ้ว", "หนองไขว่", "บ้านกลาง", "ช้างตะลูด", "น้ำชุน", "บ้านโสก", "น้ำก้อ", "ฝายนาแซง", "บุ่งคล้า", "บุ่งน้ำเต้า", "บ้านหวาย", "ลานบ่า", "ปากช่อง"],
+            "หล่มเก่า" => ["หล่มเก่า", "นาแซง", "หนองอิเฒ่า", "หินฮาว", "บ้านเนิน", "ศิลา", "ตาดกลอย", "วังบาล", "นาซำ"],
+            "วิเชียรบุรี" => ["ท่าโรง", "สระประดู่", "สามแยก", "โคกปรง", "น้ำร้อน", "บ่อรัง", "พุเตย", "พุขาม", "ภูน้ำหยด", "ซับสมบูรณ์", "บึงกระจับ", "วังใหญ่", "ยางสาว"],
+            "ศรีเทพ" => ["ศรีเทพ", "สระกรวด", "คลองกระจัง", "นาสนุ่น", "โคกสะอาด", "หนองย่างทอย", "ประดู่งาม"],
+            "หนองไผ่" => ["หนองไผ่", "นาเฉลียง", "กองทูล", "บ้านโภชน์", "เพชรละคร", "บ่อไทย", "ห้วยโป่ง", "วังท่าดี", "บัววัฒนา", "วังโบสถ์", "ท่าแดง", "ยางงาม"],
+            "บึงสามพัน" => ["ซับสมอทอด", "ซับไม้แดง", "หนองแจง", "กันจุ", "วังพิกุล", "พญาวัง", "ศรีมงคล", "สระแก้ว", "บึงสามพัน"],
+            "น้ำหนาว" => ["น้ำหนาว", "หลักด่าน", "วอแก้ว", "โคกมน"],
+            "วังโป่ง" => ["วังโป่ง", "ท้ายดง", "ซับเปิบ", "วังหิน", "วังศาล"],
+            "เขาค้อ" => ["เขาค้อ", "สะเดาะพง", "หนองแม่นา", "แคมป์สน", "ทุ่งสมอ", "ริมสีม่วง", "เข็กน้อย"]
+        ];
+    @endphp
     <div class="glass-card">
       <div class="section-header">
         <h3 class="section-title">ส่วนที่ 2: กิจกรรมย่อยภายใต้โครงการ</h3>
@@ -265,12 +284,35 @@
           <div class="info-item" style="margin-bottom: 12px;">
             <div class="info-label">พื้นที่เป้าหมาย</div>
             <div class="info-val">
-              @if(isset($act['target_province']))
-              จังหวัด{{ $act['target_province'] }}
-              @if(!empty($act['target_district'])) ➔ อำเภอ{{ is_array($act['target_district']) ? implode(', ',
-              $act['target_district']) : $act['target_district'] }} @endif
-              @if(!empty($act['target_subdistrict'])) ➔ ตำบล{{ is_array($act['target_subdistrict']) ? implode(', ',
-              $act['target_subdistrict']) : $act['target_subdistrict'] }} @endif
+              @if(isset($act['target_province']) || !empty($act['target_district']) || !empty($act['target_subdistrict']))
+              จังหวัด{{ $act['target_province'] ?? $proposal->target_province ?? 'เพชรบูรณ์' }}
+                @php
+                    $rawDistricts = !empty($act['target_district']) ? (is_array($act['target_district']) ? $act['target_district'] : explode(',', $act['target_district'])) : [];
+                    $rawSubdistricts = !empty($act['target_subdistrict']) ? (is_array($act['target_subdistrict']) ? $act['target_subdistrict'] : explode(',', $act['target_subdistrict'])) : [];
+                    
+                    $selectedDistricts = collect($rawDistricts)->flatMap(fn($d) => explode(',', $d))->map(fn($d) => trim($d))->filter()->unique()->values()->all();
+                    $selectedSubdistricts = collect($rawSubdistricts)->flatMap(fn($d) => explode(',', $d))->map(fn($d) => trim($d))->filter()->unique()->values()->all();
+                @endphp
+                @if(count($selectedDistricts) > 0)
+                    <div style="margin-top: 8px; padding-left: 10px; display: flex; flex-direction: column; gap: 4px;">
+                    @foreach($selectedDistricts as $dist)
+                        <div>
+                            <span style="color: var(--primary);">➔ อำเภอ{{ $dist }}</span>
+                            @php
+                                $subsInThisDist = [];
+                                if (isset($addressData[$dist])) {
+                                    $subsInThisDist = array_intersect($selectedSubdistricts, $addressData[$dist]);
+                                }
+                            @endphp
+                            @if(count($subsInThisDist) > 0)
+                                <span style="color: var(--text-muted); font-size: 13px; margin-left: 6px;">
+                                    (ตำบล: {{ implode(', ', $subsInThisDist) }})
+                                </span>
+                            @endif
+                        </div>
+                    @endforeach
+                    </div>
+                @endif
               @else
               {{ $act['target_area'] ?? '-' }}
               @endif
@@ -329,13 +371,26 @@
             <div class="info-label">ตัวชี้วัดของกิจกรรม</div>
             <div class="info-val">
               @if(!empty($act['activity_kpis']) && is_array($act['activity_kpis']))
-              <ul style="margin: 0; padding-left: 20px;">
-                @foreach($act['activity_kpis'] as $akpi)
-                @if(!empty($akpi['name']))
-                <li>{{ $akpi['name'] }}</li>
-                @endif
-                @endforeach
-              </ul>
+              <table class="table" style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px;">
+                <thead>
+                  <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500;">ชื่อตัวชี้วัด</th>
+                    <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500; width: 25%;">ค่าเป้าหมาย</th>
+                    <th style="padding: 8px; text-align: left; color: var(--text-muted); font-weight: 500; width: 25%;">หน่วยวัด</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($act['activity_kpis'] as $akpi)
+                  @if(!empty($akpi['name']))
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 8px;">{{ $akpi['name'] }}</td>
+                    <td style="padding: 8px;">{{ $akpi['target'] ?? '-' }}</td>
+                    <td style="padding: 8px;">{{ $akpi['unit'] ?? '-' }}</td>
+                  </tr>
+                  @endif
+                  @endforeach
+                </tbody>
+              </table>
               @else
               {{ is_string($act['activity_kpis'] ?? null) ? $act['activity_kpis'] : '-' }}
               @endif

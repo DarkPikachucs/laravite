@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Phy70Proposal extends Model
 {
-    protected $connection = 'sqlite_phy70';
+    
     protected $table = 'phy70_proposals';
 
     protected $fillable = [
@@ -28,6 +28,7 @@ class Phy70Proposal extends Model
         'outcome',
         'main_activity',
         'operating_agency',
+        'operating_year',
         'responsible_person',
         'position',
         'contact_address',

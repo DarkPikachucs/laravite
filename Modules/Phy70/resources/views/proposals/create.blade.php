@@ -10,7 +10,14 @@ $oldData = old();
 if (empty($oldData) && $isEdit) {
     $oldData = $proposal->toArray();
 }
+$orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluck('name')->toArray();
 ?>
+<datalist id="organizationList">
+  @foreach($orgList as $orgName)
+  <option value="{{ $orgName }}">
+  @endforeach
+</datalist>
+
 <x-phy70::layouts.master>
   <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
@@ -248,6 +255,14 @@ if (empty($oldData) && $isEdit) {
     :root.light-theme .kpi-box {
       background: rgba(0, 0, 0, 0.03);
     }
+    
+    .timeline-dot {
+      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+      background: var(--bg-base); border: 2px solid rgba(148, 163, 184, 0.4);
+    }
+    :root.light-theme .timeline-dot {
+      background: #f8fafc;
+    }
 
     .custom-modal-backdrop {
       position: fixed;
@@ -260,6 +275,50 @@ if (empty($oldData) && $isEdit) {
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .area-item {
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .area-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .area-item.selected {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #fff;
+    }
+
+    .subdistrict-list .area-item.selected {
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .modern-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .modern-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+    }
+
+    .modern-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
   </style>
 
@@ -284,7 +343,7 @@ if (empty($oldData) && $isEdit) {
     @endif
 
     <div class="glass-card">
-      <form action="{{ $route }}" method="POST" id="proposal-form" enctype="multipart/form-data">
+      <form action="{{ $route }}" method="POST" id="proposal-form" enctype="multipart/form-data" @keydown.enter="$event.target.tagName !== 'TEXTAREA' ? $event.preventDefault() : null">
         @csrf
         @if($isEdit) @method('PUT') @endif
 
@@ -299,7 +358,7 @@ if (empty($oldData) && $isEdit) {
 
           <div class="form-group">
             <label class="form-label">ประเด็นการพัฒนาของจังหวัด <span style="color: var(--danger);">*</span></label>
-            <select name="province_issue" class="form-control" x-model="formData.province_issue" @change="onIssueChange"
+            <select name="province_issue" class="form-control" :value="formData.province_issue" @change="formData.province_issue = $event.target.value; onIssueChange()"
               required>
               <option value="">-- เลือกประเด็นการพัฒนา --</option>
               <template x-for="(issue, index) in issuesData" :key="index">
@@ -307,6 +366,50 @@ if (empty($oldData) && $isEdit) {
                 </option>
               </template>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ระยะเวลาดำเนินงาน (ปี พ.ศ.) <span style="color: var(--danger);">*</span></label>
+            <input type="text" name="operating_year" x-model="formData.operating_year" style="display: none;">
+            <div style="position: relative; margin-top: 16px; padding-bottom: 28px; width: 100%; max-width: 600px;">
+              <!-- Background line -->
+              <div style="position: absolute; top: 12px; left: 0; width: 100%; height: 4px; background: rgba(148, 163, 184, 0.2); z-index: 0; border-radius: 2px;"></div>
+              
+              <!-- Foreground (Active) line -->
+              <div style="position: absolute; top: 12px; left: 0; height: 4px; background: var(--primary); z-index: 1; border-radius: 2px; transition: width 0.3s ease;"
+                   :style="'width: ' + ((hoverYear ? years.indexOf(hoverYear) : (formData.operating_year ? years.indexOf(formData.operating_year) : 0)) / (years.length - 1) * 100) + '%;'"
+              ></div>
+
+              <!-- Nodes -->
+              <div style="display: flex; justify-content: space-between; position: relative; z-index: 2;">
+                <template x-for="year in years" :key="year">
+                  <div 
+                    style="display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative;"
+                    @mouseenter="hoverYear = year"
+                    @mouseleave="hoverYear = null"
+                    @click="formData.operating_year = year"
+                  >
+                    <!-- Dot -->
+                    <div 
+                      class="timeline-dot"
+                      :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'background: var(--primary); box-shadow: 0 0 12px var(--primary-glow); border-color: var(--primary);' : ''"
+                    >
+                      <div 
+                        style="width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: opacity 0.2s;"
+                        :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'opacity: 1;' : 'opacity: 0;'"
+                      ></div>
+                    </div>
+                    
+                    <!-- Label -->
+                    <span 
+                      style="font-size: 13px; font-weight: 600; position: absolute; top: 34px; white-space: nowrap; transition: color 0.2s;"
+                      :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'color: var(--primary);' : 'color: var(--text-muted);'"
+                      x-text="'ปี ' + year"
+                    ></span>
+                  </div>
+                </template>
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
@@ -381,12 +484,12 @@ if (empty($oldData) && $isEdit) {
                 </div>
                 <div class="form-group">
                   <label class="form-label">แนวทางการพัฒนาจังหวัด <span style="color: var(--danger);">*</span></label>
-                  <select :name="'activities['+index+'][guideline]'" class="form-control" x-model="act.guideline"
+                  <select :name="'activities['+index+'][guideline]'" class="form-control" :value="act.guideline" @change="act.guideline = $event.target.value"
                     required>
                     <option value="">-- เลือกแนวทาง --</option>
                     <template x-if="formData.province_issue && guidelinesData[formData.province_issue]">
                       <template x-for="g in guidelinesData[formData.province_issue]" :key="g">
-                        <option :value="g" x-text="g"></option>
+                        <option :value="g" x-text="g" :selected="act.guideline === g"></option>
                       </template>
                     </template>
                   </select>
@@ -427,6 +530,8 @@ if (empty($oldData) && $isEdit) {
                     ยังไม่ได้เลือกพื้นที่เป้าหมาย
                   </div>
                 </template>
+                <input type="hidden" :name="'activities['+index+'][target_province]'"
+                  :value="act.target_province || 'เพชรบูรณ์'">
                 <input type="hidden" :name="'activities['+index+'][target_district][]'" :value="act.target_district">
                 <input type="hidden" :name="'activities['+index+'][target_subdistrict][]'"
                   :value="act.target_subdistrict">
@@ -448,7 +553,7 @@ if (empty($oldData) && $isEdit) {
                 <div class="form-group">
                   <label class="form-label">หน่วยงานรับผิดชอบ <span style="color: var(--danger);">*</span></label>
                   <input type="text" :name="'activities['+index+'][responsible_agency]'" class="form-control"
-                    x-model="act.responsible_agency" required>
+                    x-model="act.responsible_agency" list="organizationList" required>
                 </div>
                 <div class="form-group">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -460,7 +565,7 @@ if (empty($oldData) && $isEdit) {
                   <template x-for="(co, cIndex) in act.co_agencies" :key="cIndex">
                     <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                       <input type="text" :name="'activities['+index+'][co_agencies]['+cIndex+'][name]'"
-                        class="form-control" x-model="co.name">
+                        class="form-control" x-model="co.name" list="organizationList">
                       <button type="button" @click="act.co_agencies.splice(cIndex, 1)"
                         style="background: none; border: none; color: var(--danger); cursor: pointer;"
                         x-show="act.co_agencies.length > 1">✕</button>
@@ -485,23 +590,42 @@ if (empty($oldData) && $isEdit) {
                   </div>
                 </div>
               </div>
-              <div class="form-group">
+
+              <div class="form-group" style="margin-top: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <label class="form-label" style="margin-bottom: 0;">ตัวชี้วัดของกิจกรรม <span
-                      style="color: var(--danger);">*</span></label>
-                  <button type="button" @click="act.activity_kpis.push({name: ''})"
+                  <label class="form-label" style="margin-bottom: 0;">ตัวชี้วัดของกิจกรรม <span style="color: var(--danger);">*</span></label>
+                  <button type="button" @click="act.activity_kpis.push({name: '', target: '', unit: ''})"
                     style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 13px;">+
                     เพิ่มตัวชี้วัด</button>
                 </div>
-                <template x-for="(akpi, akIndex) in act.activity_kpis" :key="akIndex">
-                  <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][name]'"
-                      class="form-control" x-model="akpi.name" required>
-                    <button type="button" @click="act.activity_kpis.splice(akIndex, 1)"
-                      style="background: none; border: none; color: var(--danger); cursor: pointer;"
-                      x-show="act.activity_kpis.length > 1">✕</button>
-                  </div>
-                </template>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.1);">
+                  <thead>
+                    <tr style="background: rgba(255,255,255,0.05); text-align: left;">
+                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);">ชื่อตัวชี้วัด</th>
+                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 20%;">ค่าเป้าหมาย</th>
+                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 20%;">หน่วยวัด</th>
+                      <th style="padding: 10px; font-weight: 500; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); width: 40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="(akpi, akIndex) in act.activity_kpis" :key="akIndex">
+                      <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][name]'" class="form-control" x-model="akpi.name" placeholder="ชื่อตัวชี้วัด" required>
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][target]'" class="form-control" x-model="akpi.target" placeholder="เป้าหมาย" required>
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                          <input type="text" :name="'activities['+index+'][activity_kpis]['+akIndex+'][unit]'" class="form-control" x-model="akpi.unit" placeholder="หน่วย" required>
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                          <button type="button" @click="act.activity_kpis.splice(akIndex, 1)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;" x-show="act.activity_kpis.length > 1">✕</button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
               </div>
             </div>
           </template>
@@ -632,7 +756,8 @@ if (empty($oldData) && $isEdit) {
             💾 บันทึกร่าง
           </button>
           <button type="submit" name="status"
-            value="{{ $isEdit && $proposal->status !== 'draft' ? $proposal->status : 'submitted' }}" class="btn-action">
+            value="{{ $isEdit && $proposal->status !== 'draft' ? $proposal->status : 'submitted' }}" class="btn-action"
+            @click="validateSubmit($event, '{{ $isEdit && $proposal->status !== 'draft' ? $proposal->status : 'submitted' }}')">
             ✓ {{ $isEdit && $proposal->status !== 'draft' ? 'บันทึกการแก้ไข' : 'ส่งข้อเสนอโครงการ' }}
           </button>
         </div>
@@ -641,40 +766,59 @@ if (empty($oldData) && $isEdit) {
     <!-- Target Area Modal -->
     <div x-show="targetAreaModal.isOpen" class="custom-modal-backdrop" style="display: none;" x-transition.opacity>
       <div class="modal-content glass-card"
-        style="width: 90%; max-width: 700px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;"
+        style="width: 90%; max-width: 800px; padding: 30px; max-height: 90vh; overflow-y: auto; position: relative;"
         @click.outside="closeTargetAreaModal()">
+        <button type="button" @click="closeTargetAreaModal()"
+          style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
         <h3
-          style="margin-top: 0; margin-bottom: 20px; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 10px;">
+          style="margin-top: 0; margin-bottom: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; font-size: 20px;">
           เลือกพื้นที่เป้าหมาย</h3>
 
-        <div class="grid-2-col" style="gap: 20px;">
+        <div class="grid-2-col" style="gap: 24px;">
           <div class="form-group">
-            <label class="form-label">อำเภอ</label>
-            <select x-model="targetAreaModal.temp_district" class="form-control" multiple
-              @change="targetAreaModal.temp_subdistrict = []" style="height: 300px;">
+            <label class="form-label" style="color: var(--primary);">อำเภอ (สามารถเลือกได้หลายรายการ)</label>
+            <div class="modern-scrollbar"
+              style="height: 350px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 8px;">
               <template x-for="district in Object.keys(addressData)" :key="district">
-                <option :value="district" x-text="district"></option>
+                <div @click="toggleDistrict(district)" class="area-item"
+                  :class="{'selected': targetAreaModal.temp_district.includes(district)}">
+                  <span x-text="district" style="font-size: 14px;"></span>
+                  <span x-show="targetAreaModal.temp_district.includes(district)"
+                    style="color: var(--primary); font-weight: bold;">✓</span>
+                </div>
               </template>
-            </select>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">กด Ctrl (Windows) หรือ Command
-              (Mac) ค้างไว้เพื่อเลือกหลายรายการ</div>
+            </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">ตำบล</label>
-            <select x-model="targetAreaModal.temp_subdistrict" class="form-control" multiple style="height: 300px;">
+            <label class="form-label" style="color: var(--secondary);">ตำบล (สามารถเลือกได้หลายรายการ)</label>
+            <div class="modern-scrollbar subdistrict-list"
+              style="height: 350px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 8px;">
               <template x-if="targetAreaModal.temp_district && targetAreaModal.temp_district.length > 0">
                 <template x-for="district in targetAreaModal.temp_district" :key="district">
-                  <optgroup :label="district">
+                  <div style="margin-bottom: 8px;">
+                    <div
+                      style="padding: 8px 12px; font-size: 12px; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;"
+                      x-text="'อำเภอ ' + district"></div>
                     <template x-for="subdistrict in addressData[district]" :key="subdistrict">
-                      <option :value="subdistrict" x-text="subdistrict"></option>
+                      <div @click="toggleSubdistrict(subdistrict)" class="area-item"
+                        :class="{'selected': targetAreaModal.temp_subdistrict.includes(subdistrict)}"
+                        style="margin-left: 8px;">
+                        <span x-text="subdistrict" style="font-size: 14px;"></span>
+                        <span x-show="targetAreaModal.temp_subdistrict.includes(subdistrict)"
+                          style="color: var(--secondary); font-weight: bold;">✓</span>
+                      </div>
                     </template>
-                  </optgroup>
+                  </div>
                 </template>
               </template>
-            </select>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">กด Ctrl (Windows) หรือ Command
-              (Mac) ค้างไว้เพื่อเลือกหลายรายการ</div>
+              <template x-if="!targetAreaModal.temp_district || targetAreaModal.temp_district.length === 0">
+                <div
+                  style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px;">
+                  กรุณาเลือกอำเภอก่อน
+                </div>
+              </template>
+            </div>
           </div>
         </div>
 
@@ -834,9 +978,12 @@ if (empty($oldData) && $isEdit) {
                 temp_district: [],
                 temp_subdistrict: []
             },
+            hoverYear: null,
+            years: ['2571', '2572', '2573', '2574', '2575'],
             formData: {
                 project_name: oldData.project_name || '',
                 province_issue: oldData.province_issue || '',
+                operating_year: oldData.operating_year || '',
                 principles: oldData.principles || '',
                 objectives: oldData.objectives || '',
                 target_province: oldData.target_province || 'เพชรบูรณ์',
@@ -866,6 +1013,25 @@ if (empty($oldData) && $isEdit) {
                         });
                     }
                 }
+                
+                if (this.formData.activities && this.formData.activities.length > 0) {
+                    this.formData.activities.forEach(act => {
+                        if (act.target_district) {
+                            let dists = Array.isArray(act.target_district) ? act.target_district : [act.target_district];
+                            act.target_district = dists.flatMap(d => typeof d === 'string' ? d.split(',').map(s => s.trim()) : d).filter(Boolean);
+                        } else {
+                            act.target_district = [];
+                        }
+
+                        if (act.target_subdistrict) {
+                            let subdists = Array.isArray(act.target_subdistrict) ? act.target_subdistrict : [act.target_subdistrict];
+                            act.target_subdistrict = subdists.flatMap(d => typeof d === 'string' ? d.split(',').map(s => s.trim()) : d).filter(Boolean);
+                        } else {
+                            act.target_subdistrict = [];
+                        }
+                    });
+                }
+
                 if (this.formData.activities.length === 0) {
                     this.addActivity();
                 }
@@ -895,7 +1061,7 @@ if (empty($oldData) && $isEdit) {
                     target_subdistrict: [],
                     target_group: this.formData.target_group || '',
                     project_kpis: [],
-                    activity_kpis: [{name: ''}],
+                    activity_kpis: [{name: '', target: '', unit: ''}],
                     responsible_person: this.formData.operating_agency || '',
                     responsible_agency: '',
                     co_agencies: [{name: ''}]
@@ -925,6 +1091,45 @@ if (empty($oldData) && $isEdit) {
             closeTargetAreaModal() {
                 this.targetAreaModal.isOpen = false;
                 this.targetAreaModal.activityIndex = null;
+            },
+
+            toggleDistrict(district) {
+                const index = this.targetAreaModal.temp_district.indexOf(district);
+                if (index > -1) {
+                    this.targetAreaModal.temp_district.splice(index, 1);
+                } else {
+                    this.targetAreaModal.temp_district.push(district);
+                }
+                const validSubdistricts = this.targetAreaModal.temp_district.flatMap(d => this.addressData[d] || []);
+                this.targetAreaModal.temp_subdistrict = this.targetAreaModal.temp_subdistrict.filter(sub => validSubdistricts.includes(sub));
+            },
+
+            toggleSubdistrict(subdistrict) {
+                const index = this.targetAreaModal.temp_subdistrict.indexOf(subdistrict);
+                if (index > -1) {
+                    this.targetAreaModal.temp_subdistrict.splice(index, 1);
+                } else {
+                    this.targetAreaModal.temp_subdistrict.push(subdistrict);
+                }
+            },
+
+            get totalBudget() {
+                return this.formData.activities.reduce((sum, act) => sum + (Number(act.budget) || 0), 0);
+            },
+
+            validateSubmit(e, actionType) {
+                if (actionType !== 'draft') {
+                    if (!this.formData.operating_year) {
+                        e.preventDefault();
+                        alert('กรุณาระบุระยะเวลาดำเนินงาน (ปี พ.ศ.)');
+                        return;
+                    }
+                    if (this.totalBudget < 500000) {
+                        e.preventDefault();
+                        alert('ไม่สามารถส่งข้อเสนอโครงการได้ เนืองจากงบประมาณรวม (' + this.totalBudget.toLocaleString() + ' บาท) ต่ำกว่า 500,000 บาท');
+                        return;
+                    }
+                }
             }
         }));
     });

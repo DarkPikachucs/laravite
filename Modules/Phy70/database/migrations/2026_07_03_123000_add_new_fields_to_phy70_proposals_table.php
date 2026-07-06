@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    protected $connection = 'sqlite_phy70';
+    
 
     /**
      * Run the migrations.
@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('phy70_proposals', function (Blueprint $table) {
-            $has = fn ($column) => Schema::connection('sqlite_phy70')->hasColumn('phy70_proposals', $column);
+            $has = fn ($column) => Schema::hasColumn('phy70_proposals', $column);
 
             if (! $has('principles'))   $table->text('principles')->nullable()->after('project_name');
             if (! $has('objectives'))   $table->text('objectives')->nullable()->after('principles');

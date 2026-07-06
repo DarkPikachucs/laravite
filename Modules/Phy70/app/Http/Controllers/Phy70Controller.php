@@ -62,6 +62,7 @@ class Phy70Controller extends Controller
         $request->validate([
             // Section 2
             'province_issue' => $req . '|string',
+            'operating_year' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
             'plan' => 'nullable|string',
@@ -141,6 +142,7 @@ class Phy70Controller extends Controller
             'organization_id' => $user->organization_id,
             'user_id' => $user->id,
             'province_issue' => $request->province_issue,
+            'operating_year' => $request->operating_year,
             'development_guideline' => $request->development_guideline,
             'main_plan' => $request->main_plan,
             'plan' => $request->plan,
@@ -166,7 +168,7 @@ class Phy70Controller extends Controller
         ]);
 
         if ($proposal->status === 'submitted' && empty($proposal->project_code)) {
-            $proposal->project_code = 'PRJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
+            $proposal->project_code = 'PJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
             $activities = $proposal->activities ?? [];
             if (is_array($activities)) {
                 foreach ($activities as $index => &$activity) {
@@ -243,6 +245,7 @@ class Phy70Controller extends Controller
         $request->validate([
             // Section 2
             'province_issue' => $req . '|string',
+            'operating_year' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
             'plan' => 'nullable|string',
@@ -296,6 +299,7 @@ class Phy70Controller extends Controller
 
         $proposal->update([
             'province_issue' => $request->province_issue,
+            'operating_year' => $request->operating_year,
             'development_guideline' => $request->development_guideline,
             'main_plan' => $request->main_plan,
             'plan' => $request->plan,
@@ -320,7 +324,7 @@ class Phy70Controller extends Controller
         ]);
 
         if ($proposal->status === 'submitted' && empty($proposal->project_code)) {
-            $proposal->project_code = 'PRJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
+            $proposal->project_code = 'PJ-2570-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
             $activities = $proposal->activities ?? [];
             if (is_array($activities)) {
                 foreach ($activities as $index => &$activity) {
