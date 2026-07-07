@@ -145,16 +145,16 @@
     .user-menu {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 6px 16px 6px 6px;
+      padding: 4px 16px 4px 4px;
       border-radius: 99px;
     }
 
     .user-avatar {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background: var(--primary);
       display: flex;
@@ -162,6 +162,7 @@
       justify-content: center;
       font-weight: 700;
       color: #fff;
+      font-size: 14px;
       overflow: hidden;
     }
 

@@ -3,6 +3,46 @@
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
   <style>
+    .bg-glow-1 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+      top: -250px;
+      left: -200px;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatGlow 12s infinite ease-in-out;
+    }
+
+    .bg-glow-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%);
+      bottom: -150px;
+      right: -100px;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatGlow 15s infinite ease-in-out alternate;
+    }
+
+    @keyframes floatGlow {
+      0% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      50% {
+        transform: translate(40px, 30px) scale(1.1);
+      }
+
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+    }
+
     .manual-container {
       max-width: 1440px;
       margin: 40px auto;
@@ -90,6 +130,8 @@
       --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
   <div class="manual-container">
     <h1>คู่มือการใช้งานระบบสารสนเทศ Phetchabun Project</h1>
 
