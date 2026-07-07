@@ -127,6 +127,148 @@
   $ai++;
   }
 
+  // ---- Per-year scope builder (ภาพรวม + รายปี) ----------------------
+  // สร้าง payload สรุปข้อมูลไว้ล่วงหน้าทั้ง "ภาพรวม" และแต่ละปีงบ เพื่อให้
+  // JS สลับมุมมองรายปีได้ทันทีโดยไม่ต้องโหลดหน้าใหม่ (ตัวเลข/กราฟ/แผนที่/ตาราง).
+  // $budOf(detail) = งบของกิจกรรมนั้นในสโคปที่กำลังคิด (ภาพรวม = งบรวม, รายปี = งบปีนั้น)
+  $buildScope = function ($budOf) use ($projects, $issueMeta, $issueDefault, $areaPalette, $areaCoords,
+  $guidelineColors) {
+  // งบต่อโครงการ (ตามลำดับเดียวกับ $projects) + ต่อกิจกรรม (flatten ตามลำดับ view)
+  $projBudget = [];
+  $detailBudget = [];
+  $issueBudget = [];
+  $issueCount = [];
+  $agencyBudget = [];
+  $areaBudget = [];
+  $areaActs = [];
+  $groupBudget = [];
+  $tambon = [];
+  $di = 0;
+  foreach ($projects as $pi => $p) {
+  $issue = $p['province_issue'];
+  $pb = 0;
+  foreach ($p['details'] as $d) {
+  $b = $budOf($d);
+  $detailBudget[$di] = $b;
+  $di++;
+  $pb += $b;
+  $t = $d['target_area'];
+  $areaBudget[$t] = ($areaBudget[$t] ?? 0) + $b;
+  if ($b > 0) $areaActs[$t] = ($areaActs[$t] ?? 0) + 1;
+  $groupBudget[$d['target_group']] = ($groupBudget[$d['target_group']] ?? 0) + $b;
+  if (!isset($tambon[$t])) $tambon[$t] = ['budget' => 0, 'acts' => 0, 'issues' => [], 'guides' => []];
+  $tambon[$t]['budget'] += $b;
+  if ($b > 0) $tambon[$t]['acts'] += 1;
+  $tambon[$t]['issues'][$issue] = ($tambon[$t]['issues'][$issue] ?? 0) + $b;
+  $tambon[$t]['guides'][$d['guideline']] = ($tambon[$t]['guides'][$d['guideline']] ?? 0) + $b;
+  }
+  $projBudget[$pi] = $pb;
+  $issueBudget[$issue] = ($issueBudget[$issue] ?? 0) + $pb;
+  if ($pb > 0) $issueCount[$issue] = ($issueCount[$issue] ?? 0) + 1;
+  $agencyBudget[$p['operating_agency']] = ($agencyBudget[$p['operating_agency']] ?? 0) + $pb;
+  }
+  arsort($issueBudget);
+  arsort($agencyBudget);
+  arsort($areaBudget);
+  arsort($groupBudget);
+
+  $maxIssue = max(1, ...(count($issueBudget) ? array_values($issueBudget) : [1]));
+  $maxArea = max(1, ...(count($areaBudget) ? array_values($areaBudget) : [1]));
+
+  // การ์ดประเด็น (สีคงที่ตาม issueMeta ทั้งหน้า)
+  $issues = [];
+  foreach ($issueBudget as $name => $bud) {
+  $m = $issueMeta[$name] ?? $issueDefault;
+  $issues[] = ['name' => $name, 'budget' => $bud, 'count' => $issueCount[$name] ?? 0,
+  'pct' => round($bud / $maxIssue * 100), 'color' => $m['color'], 'bg' => $m['bg'], 'icon' => $m['icon']];
+  }
+
+  // รายการพื้นที่ (layer-map list ใต้แผนที่) + payload แผนที่
+  $areaList = [];
+  $areaMap = [];
+  $ai = 0;
+  foreach ($areaBudget as $area => $bud) {
+  $color = $areaPalette[$ai % count($areaPalette)];
+  $agg = $tambon[$area];
+  arsort($agg['issues']);
+  arsort($agg['guides']);
+  $issueBreak = [];
+  foreach ($agg['issues'] as $is => $b) {
+  if ($b <= 0) continue;
+  $issueBreak[] = ['name' => $is, 'budget' => $b, 'color' => ($issueMeta[$is]['color'] ?? $issueDefault['color'])];
+  }
+  $guideBreak = [];
+  foreach ($agg['guides'] as $g => $b) {
+  if ($b <= 0) continue;
+  $guideBreak[] = ['name' => $g, 'budget' => $b, 'color' => ($guidelineColors[$g] ?? '#64748b')];
+  }
+  $pct = round($bud / $maxArea * 100);
+  $areaList[] = ['name' => $area, 'budget' => $bud, 'acts' => $areaActs[$area] ?? 0, 'pct' => $pct,
+  'color' => $color, 'rank' => $ai + 1];
+  $areaMap[] = [
+  'name' => $area, 'budget' => $bud, 'acts' => $areaActs[$area] ?? 0, 'color' => $color,
+  'lat' => $areaCoords[$area][0] ?? 16.42, 'lng' => $areaCoords[$area][1] ?? 101.15, 'pct' => $pct,
+  'issues' => $issueBreak, 'guides' => $guideBreak,
+  'domIssue' => $issueBreak[0] ?? ['name' => '—', 'budget' => 0, 'color' => '#64748b'],
+  'domGuide' => $guideBreak[0] ?? ['name' => '—', 'budget' => 0, 'color' => '#64748b'],
+  ];
+  $ai++;
+  }
+
+  // top 5 โครงการตามงบในสโคปนี้
+  $topIdx = collect($projBudget)->sortDesc()->take(5)->keys();
+  $top = [];
+  foreach ($topIdx as $pi) {
+  if (($projBudget[$pi] ?? 0) <= 0) continue;
+  $top[] = ['name' => $projects[$pi]['project_name'], 'agency' => $projects[$pi]['operating_agency'],
+  'budget' => $projBudget[$pi]];
+  }
+
+  $totalBudget = array_sum($detailBudget);
+  $activeProjects = count(array_filter($projBudget, fn($b) => $b > 0));
+
+  return [
+  'kpi' => [
+  'projects' => $activeProjects,
+  'activities' => count(array_filter($detailBudget, fn($b) => $b > 0)),
+  'total_budget' => $totalBudget,
+  'agencies' => collect($projects)->filter(fn($p, $pi) => ($projBudget[$pi] ?? 0) > 0)
+  ->pluck('operating_agency')->unique()->count(),
+  'target_areas' => count(array_filter($areaBudget, fn($b) => $b > 0)),
+  'avg_budget' => $activeProjects ? round($totalBudget / $activeProjects) : 0,
+  ],
+  'issues' => $issues,
+  'agency' => ['labels' => array_keys($agencyBudget), 'values' => array_values($agencyBudget)],
+  'group' => ['labels' => array_keys($groupBudget), 'values' => array_values($groupBudget)],
+  'areaList' => $areaList,
+  'areaMap' => $areaMap,
+  'top' => $top,
+  'projBudget' => array_map(fn($pi) => $projBudget[$pi] ?? 0, array_keys($projBudget)),
+  'detailBudget' => $detailBudget,
+  ];
+  };
+
+  // ภาพรวม = งบรวมของกิจกรรม / รายปี = งบเฉพาะปีนั้นใน yearly_budgets
+  $scopes = ['overview' => $buildScope(fn($d) => $d['budget'])];
+  foreach ($years as $y) {
+  $scopes[$y] = $buildScope(fn($d) => $d['yearly_budgets'][$y] ?? 0);
+  }
+
+  // Stacked bar — งบประมาณรายปี (แกน X = ปี, ซ้อนสีตามประเด็น) สำหรับโหมดภาพรวม
+  $stackIssues = collect($scopes['overview']['issues'])->pluck('name');
+  $stackedSeries = [];
+  foreach ($stackIssues as $isName) {
+  $m = $issueMeta[$isName] ?? $issueDefault;
+  $data = [];
+  foreach ($years as $y) {
+  $row = collect($scopes[$y]['issues'])->firstWhere('name', $isName);
+  $data[] = $row ? $row['budget'] : 0;
+  }
+  $stackedSeries[] = ['name' => $isName, 'color' => $m['color'], 'data' => $data];
+  }
+  $stackedTotals = [];
+  foreach ($years as $y) { $stackedTotals[] = $scopes[$y]['kpi']['total_budget']; }
+
   // ---- Inline SVG path library --------------------------------------
   $svgIcons = [
   'activity' => '
@@ -385,6 +527,80 @@
       color: var(--text-muted);
       font-size: 14px;
       margin-bottom: 28px;
+    }
+
+    /* Year selector (ภาพรวม + รายปี) */
+    .year-selector {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 6px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-card);
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .year-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      padding: 9px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      white-space: nowrap;
+    }
+
+    .year-btn:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .year-btn.active {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.30);
+    }
+
+    .year-btn small {
+      font-weight: 500;
+      opacity: 0.75;
+      font-size: 11px;
+      margin-left: 5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .scope-note {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: -12px 0 22px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scope-note b {
+      color: var(--primary);
+    }
+
+    /* Dim rows/cards that have no budget in the selected year */
+    .is-zero {
+      opacity: 0.38;
+      filter: grayscale(0.4);
+    }
+
+    /* Elements shown only in overview mode (hidden when a year is picked) */
+    .overview-only.hide-scope {
+      display: none;
     }
 
     /* KPI cards */
@@ -1023,6 +1239,23 @@
     </div>
     @else
 
+    <!-- Year selector (ภาพรวม + รายปี) -->
+    <div class="year-selector" id="yearSelector">
+      <button type="button" class="year-btn active" data-scope="overview">ภาพรวม<small>ทุกปี</small></button>
+      @foreach($years as $y)
+      <button type="button" class="year-btn" data-scope="{{ $y }}">ปี {{ $y }}</button>
+      @endforeach
+    </div>
+    <div class="scope-note" id="scopeNote" style="display: none;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+      <span>กำลังแสดงเฉพาะงบประมาณของ <b id="scopeNoteYear"></b> — รายการที่ไม่มีงบในปีนี้จะถูกจางลง</span>
+    </div>
+
     <!-- KPI cards -->
     <div class="kpi-grid">
       <div class="glass-card kpi-card">
@@ -1035,7 +1268,7 @@
           </div>
           <span class="kpi-label">จำนวนโครงการทั้งหมด</span>
         </div>
-        <div class="kpi-value">{{ number_format($kpi['projects']) }}<span class="kpi-unit">โครงการ</span></div>
+        <div class="kpi-value"><span id="kpi-projects">{{ number_format($kpi['projects']) }}</span><span class="kpi-unit">โครงการ</span></div>
       </div>
 
       <div class="glass-card kpi-card">
@@ -1047,7 +1280,7 @@
           </div>
           <span class="kpi-label">จำนวนกิจกรรมทั้งหมด</span>
         </div>
-        <div class="kpi-value">{{ number_format($kpi['activities']) }}<span class="kpi-unit">กิจกรรม</span></div>
+        <div class="kpi-value"><span id="kpi-activities">{{ number_format($kpi['activities']) }}</span><span class="kpi-unit">กิจกรรม</span></div>
       </div>
 
       <div class="glass-card kpi-card">
@@ -1060,7 +1293,7 @@
           </div>
           <span class="kpi-label">งบประมาณรวมทั้งหมด</span>
         </div>
-        <div class="kpi-value">{{ number_format($kpi['total_budget']) }}<span class="kpi-unit">บาท</span></div>
+        <div class="kpi-value"><span id="kpi-total_budget">{{ number_format($kpi['total_budget']) }}</span><span class="kpi-unit">บาท</span></div>
       </div>
 
       <div class="glass-card kpi-card">
@@ -1074,7 +1307,7 @@
           </div>
           <span class="kpi-label">หน่วยงานดำเนินการ</span>
         </div>
-        <div class="kpi-value">{{ number_format($kpi['agencies']) }}<span class="kpi-unit">หน่วยงาน</span></div>
+        <div class="kpi-value"><span id="kpi-agencies">{{ number_format($kpi['agencies']) }}</span><span class="kpi-unit">หน่วยงาน</span></div>
       </div>
 
       <div class="glass-card kpi-card">
@@ -1087,7 +1320,7 @@
           </div>
           <span class="kpi-label">พื้นที่เป้าหมาย</span>
         </div>
-        <div class="kpi-value">{{ number_format($kpi['target_areas']) }}<span class="kpi-unit">ตำบล</span></div>
+        <div class="kpi-value"><span id="kpi-target_areas">{{ number_format($kpi['target_areas']) }}</span><span class="kpi-unit">ตำบล</span></div>
       </div>
 
       <div class="glass-card kpi-card">
@@ -1101,7 +1334,7 @@
           </div>
           <span class="kpi-label">งบประมาณเฉลี่ย/โครงการ</span>
         </div>
-        <div class="kpi-value">{{ number_format($kpi['avg_budget']) }}<span class="kpi-unit">บาท</span></div>
+        <div class="kpi-value"><span id="kpi-avg_budget">{{ number_format($kpi['avg_budget']) }}</span><span class="kpi-unit">บาท</span></div>
       </div>
     </div>
 
@@ -1116,7 +1349,7 @@
       <div class="issue-grid">
         @forelse($budgetByIssue as $issue => $budget)
         @php $m = $issueMeta[$issue] ?? $issueDefault; @endphp
-        <div class="issue-card">
+        <div class="issue-card" data-issue="{{ $issue }}">
           <div class="issue-accent" style="background: {{ $m['color'] }};"></div>
           <div class="issue-top">
             <div class="issue-icon" style="background: {{ $m['bg'] }};">
@@ -1125,13 +1358,14 @@
             </div>
             <div style="min-width: 0;">
               <div class="issue-name">{{ $issue }}</div>
-              <div class="issue-count">{{ $issueCounts[$issue] ?? 0 }} โครงการ</div>
+              <div class="issue-count"><span class="js-issue-count">{{ $issueCounts[$issue] ?? 0 }}</span> โครงการ</div>
             </div>
           </div>
-          <div class="issue-budget" style="color: {{ $m['color'] }};">{{ number_format($budget) }}<small>บาท</small>
+          <div class="issue-budget" style="color: {{ $m['color'] }};"><span class="js-issue-budget">{{
+            number_format($budget) }}</span><small>บาท</small>
           </div>
           <div class="issue-bar">
-            <div class="issue-bar-fill"
+            <div class="issue-bar-fill js-issue-bar"
               style="width: {{ round($budget / $maxIssueBudget * 100) }}%; background: {{ $m['color'] }};"></div>
           </div>
         </div>
@@ -1144,6 +1378,29 @@
         </div>
         @endforelse
       </div>
+    </div>
+
+    <!-- Budget by fiscal year (stacked by issue) — overview only -->
+    <div class="glass-card section-block overview-only" id="yearlyBudgetSection">
+      <h3 class="section-title" style="color: var(--primary);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="20" x2="12" y2="10" />
+          <line x1="18" y1="20" x2="18" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="16" />
+        </svg>
+        งบประมาณรายปีงบประมาณ (2571–2575)
+      </h3>
+      <p class="section-sub">การกระจายงบประมาณในแต่ละปีงบ ซ้อนสีตามประเด็นการพัฒนา —
+        คลิกที่ปุ่มปีด้านบนเพื่อเจาะดูข้อมูลเฉพาะปีนั้นทั้งแดชบอร์ด</p>
+      @if($budgetByIssue->sum() <= 0)
+      <div class="empty-state compact">
+        <div class="empty-title">ยังไม่มีข้อมูลงบประมาณรายปี</div>
+        <div class="empty-desc">ยังไม่มีโครงการที่ระบุการแบ่งงบประมาณรายปี</div>
+      </div>
+      @else
+      <div class="chart-canvas-wrap" style="height: 340px;"><canvas id="chartYearly"></canvas></div>
+      @endif
     </div>
 
     <!-- Charts row: guideline + agency -->
@@ -1198,8 +1455,8 @@
       $acts = $activitiesByArea[$area] ?? 0;
       $pct = round($budget / $maxAreaBudget * 100);
       @endphp
-      <div class="layer-row">
-        <div class="layer-fill" style="width: {{ $pct }}%; background: {{ $color }};"></div>
+      <div class="layer-row" data-area="{{ $area }}">
+        <div class="layer-fill js-area-fill" style="width: {{ $pct }}%; background: {{ $color }};"></div>
         <div class="layer-edge" style="background: {{ $color }};"></div>
         <div class="layer-rank" style="background: {{ $color }};">{{ $loop->iteration }}</div>
         <div class="layer-pin" style="background: {{ $color }}1f;">
@@ -1208,15 +1465,15 @@
         </div>
         <div class="layer-info">
           <div class="layer-name">{{ $area }}</div>
-          <div class="layer-sub">สัดส่วนงบประมาณ {{ $pct }}% ของพื้นที่สูงสุด</div>
+          <div class="layer-sub">สัดส่วนงบประมาณ <span class="js-area-pct">{{ $pct }}</span>% ของพื้นที่สูงสุด</div>
         </div>
         <div class="layer-stats">
           <div class="layer-stat">
-            <div class="layer-stat-value">{{ number_format($acts) }}</div>
+            <div class="layer-stat-value js-area-acts">{{ number_format($acts) }}</div>
             <div class="layer-stat-label">กิจกรรม</div>
           </div>
           <div class="layer-stat">
-            <div class="layer-stat-value" style="color: {{ $color }};">{{ number_format($budget) }}</div>
+            <div class="layer-stat-value js-area-budget" style="color: {{ $color }};">{{ number_format($budget) }}</div>
             <div class="layer-stat-label">บาท</div>
           </div>
         </div>
@@ -1246,7 +1503,7 @@
   </div>
   <div class="glass-card chart-card">
     <h3 class="section-title" style="color: #9333ea;">5 โครงการงบประมาณสูงสุด</h3>
-    <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+    <div id="topProjects" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
       @forelse($topProjects as $i => $p)
       <div
         style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px;">
@@ -1300,7 +1557,7 @@
         <tbody>
           @forelse($projects as $p)
           @php $im = $issueMeta[$p['province_issue']] ?? $issueDefault; @endphp
-          <tr>
+          <tr data-pindex="{{ $loop->index }}">
             <td class="code-cell">{{ $p['project_id'] }}</td>
             <td style="font-weight: 600; white-space: normal; min-width: 220px;">{{ $p['project_name'] }}</td>
             <td><span class="chip" style="background: {{ $im['bg'] }}; color: {{ $im['color'] }};"><span
@@ -1311,7 +1568,7 @@
             <td class="cell-clip" title="{{ $p['operating_agency'] }}">{{ $p['operating_agency'] }}</td>
             <td class="cell-clip" title="{{ $p['output'] }}">{{ $p['output'] }}</td>
             <td class="cell-clip" title="{{ $p['outcome'] }}">{{ $p['outcome'] }}</td>
-            <td class="num-cell">{{ number_format($p['total_budget']) }}</td>
+            <td class="num-cell js-pbudget">{{ number_format($p['total_budget']) }}</td>
           </tr>
           @empty
           <tr>
@@ -1323,8 +1580,8 @@
           <tr>
             <td colspan="9" style="text-align: right; font-weight: 600; color: var(--text-muted);">รวมงบประมาณทั้งสิ้น
             </td>
-            <td class="num-cell" style="color: var(--success); font-size: 15px;">{{ number_format($kpi['total_budget'])
-              }}</td>
+            <td class="num-cell" id="projTableTotal" style="color: var(--success); font-size: 15px;">{{
+              number_format($kpi['total_budget']) }}</td>
           </tr>
         </tfoot>
       </table>
@@ -1362,20 +1619,22 @@
             <td colspan="10" class="empty-cell">ยังไม่มีข้อมูลกิจกรรม</td>
           </tr>
           @endif
+          @php $di = 0; @endphp
           @foreach($projects as $p)
           @foreach($p['details'] as $d)
-          <tr>
+          <tr data-dindex="{{ $di }}">
             <td class="code-cell">{{ $d['activity_id'] }}</td>
             <td class="code-cell" style="color: var(--text-muted);">{{ $p['project_id'] }}</td>
             <td><span class="chip chip-cyan">{{ $d['guideline'] }}</span></td>
             <td><span class="chip chip-emerald">{{ $d['target_area'] }}</span></td>
             <td>{{ $d['target_group'] }}</td>
             <td style="white-space: normal; min-width: 220px;">{{ $d['activity'] }}</td>
-            <td class="num-cell">{{ number_format($d['budget']) }}</td>
+            <td class="num-cell js-dbudget">{{ number_format($d['budget']) }}</td>
             <td>{{ $d['responsible_person'] }}</td>
             <td class="cell-clip" title="{{ $d['responsible_agency'] }}">{{ $d['responsible_agency'] }}</td>
             <td class="cell-clip" title="{{ $d['related_agency'] }}">{{ $d['related_agency'] }}</td>
           </tr>
+          @php $di++; @endphp
           @endforeach
           @endforeach
         </tbody>
@@ -1387,36 +1646,36 @@
 
   @unless($projects->isEmpty())
   <script>
-    // ---- Leaflet area map (ข้อมูลพื้นที่ — เลือก layer: ตำบล/ประเด็น/แนวทาง) ----
-        const areaData = @json($areaMapData);
-        const bahtFmtMap = (v) => new Intl.NumberFormat('th-TH').format(v);
+    // ---- Precomputed per-scope payloads (ภาพรวม + รายปี) ----
+        const SCOPES = @json($scopes);
+        const YEARS  = @json($years);
+        const STACKED = { years: @json($years), series: @json($stackedSeries), totals: @json($stackedTotals) };
 
+        const bahtFmt = (v) => new Intl.NumberFormat('th-TH').format(Math.round(v || 0));
+        const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+        // ================= Leaflet area map =================
         const areaMap = L.map('areaMap', { scrollWheelZoom: true, zoomControl: true });
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(areaMap);
 
-        const maxBudget = Math.max(...areaData.map(a => a.budget), 1);
-        const bounds = areaData.map(a => [a.lat, a.lng]);
-
-        // header row of a popup (ชื่อตำบล + งบ + กิจกรรม)
         const popHead = (a) =>
-            '<div class="map-pop-name">' + a.name + '</div>' +
-            '<div class="map-pop-row"><span>งบประมาณรวม</span><b>' + bahtFmtMap(a.budget) + ' บาท</b></div>' +
-            '<div class="map-pop-row"><span>จำนวนกิจกรรม</span><b>' + bahtFmtMap(a.acts) + ' กิจกรรม</b></div>';
+            '<div class="map-pop-name">' + esc(a.name) + '</div>' +
+            '<div class="map-pop-row"><span>งบประมาณรวม</span><b>' + bahtFmt(a.budget) + ' บาท</b></div>' +
+            '<div class="map-pop-row"><span>จำนวนกิจกรรม</span><b>' + bahtFmt(a.acts) + ' กิจกรรม</b></div>';
 
-        // breakdown rows (แยกตามประเด็น/แนวทาง พร้อมจุดสี)
         const popBreak = (items, title) => {
             let h = '<div class="map-pop-row" style="margin-top:6px;font-weight:600;color:#1e293b;"><span>แยกตาม' + title + '</span><span></span></div>';
             items.forEach(it => {
-                h += '<div class="map-pop-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + it.color + ';margin-right:6px;"></span>' + it.name + '</span><b>' + bahtFmtMap(it.budget) + '</b></div>';
+                h += '<div class="map-pop-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + it.color + ';margin-right:6px;"></span>' + esc(it.name) + '</span><b>' + bahtFmt(it.budget) + '</b></div>';
             });
             return h;
         };
 
-        const makeMarker = (a, color, popupHtml) => {
-            const r = 10 + (a.budget / maxBudget) * 20;   // radius 10 → 30 px by budget
+        const makeMarker = (a, maxB, color, popupHtml) => {
+            const r = 10 + (a.budget / maxB) * 20;   // radius 10 → 30 px by budget
             const m = L.circleMarker([a.lat, a.lng], {
                 radius: r, color: color, weight: 2, fillColor: color, fillOpacity: 0.45
             });
@@ -1425,23 +1684,28 @@
             return m;
         };
 
-        // สร้าง 3 layer groups
         const layerTambon = L.layerGroup();
         const layerIssue  = L.layerGroup();
         const layerGuide  = L.layerGroup();
 
-        areaData.forEach(a => {
-            layerTambon.addLayer(makeMarker(a, a.color,
-                popHead(a) + '<div class="map-pop-row"><span>สัดส่วนงบ</span><b>' + a.pct + '%</b></div>'));
-            layerIssue.addLayer(makeMarker(a, a.domIssue.color,
-                popHead(a) + popBreak(a.issues, 'ประเด็น')));
-            layerGuide.addLayer(makeMarker(a, a.domGuide.color,
-                popHead(a) + popBreak(a.guides, 'แนวทาง')));
-        });
+        // (Re)build the three marker layers from a scope's areaMap payload.
+        function buildMapLayers(areaData) {
+            layerTambon.clearLayers(); layerIssue.clearLayers(); layerGuide.clearLayers();
+            const maxB = Math.max(...areaData.map(a => a.budget), 1);
+            areaData.forEach(a => {
+                if (a.budget <= 0) return; // hide areas with no budget in this scope
+                layerTambon.addLayer(makeMarker(a, maxB, a.color,
+                    popHead(a) + '<div class="map-pop-row"><span>สัดส่วนงบ</span><b>' + a.pct + '%</b></div>'));
+                layerIssue.addLayer(makeMarker(a, maxB, a.domIssue.color,
+                    popHead(a) + popBreak(a.issues, 'ประเด็น')));
+                layerGuide.addLayer(makeMarker(a, maxB, a.domGuide.color,
+                    popHead(a) + popBreak(a.guides, 'แนวทาง')));
+            });
+        }
 
+        buildMapLayers(SCOPES.overview.areaMap);
         layerTambon.addTo(areaMap); // มุมมองเริ่มต้น
 
-        // ตัวเลือก layer (radio) มุมขวาบน
         L.control.layers({
             'ดูเป็นตำบล':   layerTambon,
             'ดูเป็นประเด็น': layerIssue,
@@ -1449,8 +1713,8 @@
         }, null, { collapsed: false, position: 'topright' }).addTo(areaMap);
 
         // ---- Dynamic legend ต่อ layer ----
-        const issueLegend = @json(collect($areaMapData)->flatMap->issues->unique('name')->values());
-        const guideLegend = @json(collect($areaMapData)->flatMap->guides->unique('name')->values());
+        const issueLegend = @json(collect($scopes['overview']['areaMap'])->flatMap->issues->unique('name')->values());
+        const guideLegend = @json(collect($scopes['overview']['areaMap'])->flatMap->guides->unique('name')->values());
         const legendEl = document.getElementById('mapLegend');
 
         const sizeLegend =
@@ -1462,7 +1726,7 @@
         const colorLegend = (title, items) => {
             let h = '<div class="map-legend-title">' + title + '</div>';
             items.forEach(it => {
-                h += '<div class="map-legend-item"><span class="map-legend-dot" style="width:12px;height:12px;opacity:1;background:' + it.color + ';"></span> ' + it.name + '</div>';
+                h += '<div class="map-legend-item"><span class="map-legend-dot" style="width:12px;height:12px;opacity:1;background:' + it.color + ';"></span> ' + esc(it.name) + '</div>';
             });
             return h;
         };
@@ -1474,14 +1738,15 @@
         };
         areaMap.on('baselayerchange', (e) => setLegend(e.name));
 
-        if (bounds.length) {
-            areaMap.fitBounds(bounds, { padding: [50, 50] });
+        const initBounds = SCOPES.overview.areaMap.map(a => [a.lat, a.lng]);
+        if (initBounds.length) {
+            areaMap.fitBounds(initBounds, { padding: [50, 50] });
         } else {
             areaMap.setView([16.42, 101.15], 9);
         }
         setTimeout(() => areaMap.invalidateSize(), 200);
 
-        // ---- Chart.js global LIGHT theme ----
+        // ================= Chart.js =================
         Chart.defaults.color = '#475569';
         Chart.defaults.font.family = "'Outfit', 'IBM Plex Sans Thai', sans-serif";
         Chart.defaults.font.size = 12;
@@ -1489,62 +1754,198 @@
         const palette = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#3b82f6'];
         const gridColor = 'rgba(15,23,42,0.06)';
         const surfaceBorder = '#ffffff';
-        const bahtFmt = (v) => new Intl.NumberFormat('th-TH').format(v);
+        const ov = SCOPES.overview;
 
-        // Budget by issue / ประเด็นการพัฒนา (doughnut) — สีตรงกับการ์ดประเด็นด้านบน
-        @if($budgetByIssue->sum() > 0)
-        new Chart(document.getElementById('chartIssue'), {
-            type: 'doughnut',
-            data: {
-                labels: @json($budgetByIssue->keys()),
-                datasets: [{ data: @json($budgetByIssue->values()), backgroundColor: @json($budgetByIssue->keys()->map(fn($k) => $issueMeta[$k]['color'] ?? $issueDefault['color'])->values()), borderColor: surfaceBorder, borderWidth: 3 }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '60%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, boxWidth: 8 } },
-                    tooltip: { callbacks: { label: (ctx) => ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท' } }
+        // Budget by issue (doughnut) — สีตรงกับการ์ดประเด็น
+        let chartIssue = null;
+        if (document.getElementById('chartIssue')) {
+            chartIssue = new Chart(document.getElementById('chartIssue'), {
+                type: 'doughnut',
+                data: {
+                    labels: ov.issues.map(i => i.name),
+                    datasets: [{ data: ov.issues.map(i => i.budget), backgroundColor: ov.issues.map(i => i.color), borderColor: surfaceBorder, borderWidth: 3 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, boxWidth: 8 } },
+                        tooltip: { callbacks: { label: (ctx) => ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท' } }
+                    }
                 }
-            }
-        });
-        @endif
+            });
+        }
 
         // Budget by operating agency (horizontal bar)
-        @if($budgetByAgency->sum() > 0)
-        new Chart(document.getElementById('chartAgency'), {
-            type: 'bar',
-            data: {
-                labels: @json($budgetByAgency->keys()),
-                datasets: [{ label: 'งบประมาณ (บาท)', data: @json($budgetByAgency->values()), backgroundColor: 'rgba(5,150,105,0.75)', borderColor: '#059669', borderWidth: 1, borderRadius: 8 }]
-            },
-            options: {
-                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ' ' + bahtFmt(ctx.raw) + ' บาท' } } },
-                scales: {
-                    x: { grid: { color: gridColor }, ticks: { callback: (v) => bahtFmt(v) } },
-                    y: { grid: { display: false }, ticks: { callback: function(v){ const l = this.getLabelForValue(v); return l.length > 22 ? l.slice(0,22)+'…' : l; } } }
+        let chartAgency = null;
+        if (document.getElementById('chartAgency')) {
+            chartAgency = new Chart(document.getElementById('chartAgency'), {
+                type: 'bar',
+                data: {
+                    labels: ov.agency.labels,
+                    datasets: [{ label: 'งบประมาณ (บาท)', data: ov.agency.values, backgroundColor: 'rgba(5,150,105,0.75)', borderColor: '#059669', borderWidth: 1, borderRadius: 8 }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ' ' + bahtFmt(ctx.raw) + ' บาท' } } },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { callback: (v) => bahtFmt(v) } },
+                        y: { grid: { display: false }, ticks: { callback: function(v){ const l = this.getLabelForValue(v); return l.length > 22 ? l.slice(0,22)+'…' : l; } } }
+                    }
                 }
-            }
-        });
-        @endif
+            });
+        }
 
         // Budget by target group (pie)
-        @if($budgetByTargetGroup->sum() > 0)
-        new Chart(document.getElementById('chartGroup'), {
-            type: 'pie',
-            data: {
-                labels: @json($budgetByTargetGroup->keys()),
-                datasets: [{ data: @json($budgetByTargetGroup->values()), backgroundColor: palette, borderColor: surfaceBorder, borderWidth: 3 }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, boxWidth: 8 } },
-                    tooltip: { callbacks: { label: (ctx) => ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท' } }
+        let chartGroup = null;
+        if (document.getElementById('chartGroup')) {
+            chartGroup = new Chart(document.getElementById('chartGroup'), {
+                type: 'pie',
+                data: {
+                    labels: ov.group.labels,
+                    datasets: [{ data: ov.group.values, backgroundColor: palette, borderColor: surfaceBorder, borderWidth: 3 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true, boxWidth: 8 } },
+                        tooltip: { callbacks: { label: (ctx) => ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท' } }
+                    }
                 }
+            });
+        }
+
+        // Budget by fiscal year (stacked by issue) — overview only, static
+        if (document.getElementById('chartYearly')) {
+            new Chart(document.getElementById('chartYearly'), {
+                type: 'bar',
+                data: {
+                    labels: STACKED.years.map(y => 'ปี ' + y),
+                    datasets: STACKED.series.map(se => ({ label: se.name, data: se.data, backgroundColor: se.color, borderColor: surfaceBorder, borderWidth: 1, borderRadius: 4 }))
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, boxWidth: 8 } },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ' ' + ctx.dataset.label + ': ' + bahtFmt(ctx.raw) + ' บาท',
+                                footer: (items) => 'รวมทั้งปี: ' + bahtFmt(items.reduce((s, i) => s + i.raw, 0)) + ' บาท'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, grid: { color: gridColor }, ticks: { callback: (v) => bahtFmt(v) } }
+                    }
+                }
+            });
+        }
+
+        const updateChart = (ch, labels, data, colors) => {
+            if (!ch) return;
+            ch.data.labels = labels;
+            ch.data.datasets[0].data = data;
+            if (colors) ch.data.datasets[0].backgroundColor = colors;
+            ch.update();
+        };
+
+        // ================= Scope switching (ภาพรวม / รายปี) =================
+        const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+        const topRowHtml = (p, i) =>
+            '<div style="display:flex;align-items:center;gap:14px;background:#f8fafc;border:1px solid var(--border);padding:12px 14px;border-radius:12px;">' +
+            '<span class="rank-badge">' + (i + 1) + '</span>' +
+            '<div style="flex:1;min-width:0;"><div class="cell-clip" style="max-width:100%;font-weight:600;font-size:13.5px;" title="' + esc(p.name) + '">' + esc(p.name) + '</div>' +
+            '<div style="font-size:12px;color:var(--text-muted);">' + esc(p.agency) + '</div></div>' +
+            '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'JetBrains Mono\',monospace;font-weight:700;color:var(--text-main);">' + bahtFmt(p.budget) + '</div>' +
+            '<div style="font-size:11px;color:var(--text-faint);">บาท</div></div></div>';
+
+        function renderScope(key) {
+            const s = SCOPES[key];
+            if (!s) return;
+            const isOverview = key === 'overview';
+
+            // KPIs
+            setText('kpi-projects', bahtFmt(s.kpi.projects));
+            setText('kpi-activities', bahtFmt(s.kpi.activities));
+            setText('kpi-total_budget', bahtFmt(s.kpi.total_budget));
+            setText('kpi-agencies', bahtFmt(s.kpi.agencies));
+            setText('kpi-target_areas', bahtFmt(s.kpi.target_areas));
+            setText('kpi-avg_budget', bahtFmt(s.kpi.avg_budget));
+
+            // Issue cards
+            const issueByName = {}; s.issues.forEach(i => issueByName[i.name] = i);
+            document.querySelectorAll('.issue-card[data-issue]').forEach(card => {
+                const row = issueByName[card.dataset.issue];
+                const b = row ? row.budget : 0;
+                const bd = card.querySelector('.js-issue-budget'); if (bd) bd.textContent = bahtFmt(b);
+                const ct = card.querySelector('.js-issue-count'); if (ct) ct.textContent = row ? row.count : 0;
+                const bar = card.querySelector('.js-issue-bar'); if (bar) bar.style.width = (row ? row.pct : 0) + '%';
+                card.classList.toggle('is-zero', b <= 0);
+            });
+
+            // Area layer-map rows
+            const areaByName = {}; s.areaList.forEach(a => areaByName[a.name] = a);
+            document.querySelectorAll('.layer-row[data-area]').forEach(rowEl => {
+                const a = areaByName[rowEl.dataset.area];
+                const b = a ? a.budget : 0;
+                const bd = rowEl.querySelector('.js-area-budget'); if (bd) bd.textContent = bahtFmt(b);
+                const ac = rowEl.querySelector('.js-area-acts'); if (ac) ac.textContent = bahtFmt(a ? a.acts : 0);
+                const pc = rowEl.querySelector('.js-area-pct'); if (pc) pc.textContent = a ? a.pct : 0;
+                const fl = rowEl.querySelector('.js-area-fill'); if (fl) fl.style.width = (a ? a.pct : 0) + '%';
+                rowEl.classList.toggle('is-zero', b <= 0);
+            });
+
+            // Top 5 projects
+            const topEl = document.getElementById('topProjects');
+            if (topEl) {
+                topEl.innerHTML = s.top.length
+                    ? s.top.map((p, i) => topRowHtml(p, i)).join('')
+                    : '<div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลโครงการในช่วงที่เลือก</div></div>';
             }
+
+            // Project table
+            document.querySelectorAll('tr[data-pindex]').forEach(tr => {
+                const b = s.projBudget[+tr.dataset.pindex] || 0;
+                const cell = tr.querySelector('.js-pbudget'); if (cell) cell.textContent = bahtFmt(b);
+                tr.classList.toggle('is-zero', b <= 0);
+            });
+            setText('projTableTotal', bahtFmt(s.kpi.total_budget));
+
+            // Detail table
+            document.querySelectorAll('tr[data-dindex]').forEach(tr => {
+                const b = s.detailBudget[+tr.dataset.dindex] || 0;
+                const cell = tr.querySelector('.js-dbudget'); if (cell) cell.textContent = bahtFmt(b);
+                tr.classList.toggle('is-zero', b <= 0);
+            });
+
+            // Charts
+            updateChart(chartIssue, s.issues.map(i => i.name), s.issues.map(i => i.budget), s.issues.map(i => i.color));
+            updateChart(chartAgency, s.agency.labels, s.agency.values);
+            updateChart(chartGroup, s.group.labels, s.group.values);
+
+            // Map
+            buildMapLayers(s.areaMap);
+
+            // Overview-only sections
+            document.querySelectorAll('.overview-only').forEach(el => el.classList.toggle('hide-scope', !isOverview));
+
+            // Scope note
+            const note = document.getElementById('scopeNote');
+            if (note) {
+                if (isOverview) { note.style.display = 'none'; }
+                else { note.style.display = 'flex'; setText('scopeNoteYear', 'ปีงบประมาณ ' + key); }
+            }
+        }
+
+        document.querySelectorAll('#yearSelector .year-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#yearSelector .year-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderScope(btn.dataset.scope);
+                setTimeout(() => areaMap.invalidateSize(), 120);
+            });
         });
-        @endif
   </script>
   @endunless
 </x-phy70::layouts.master>
