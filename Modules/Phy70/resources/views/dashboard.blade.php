@@ -1870,7 +1870,6 @@
             <th>รหัสโครงการ</th>
             <th>ชื่อโครงการ</th>
             <th>ประเด็นการพัฒนาของจังหวัด</th>
-            <th>แนวทางการพัฒนาจังหวัด</th>
             <th>หลักการและเหตุผล</th>
             <th>วัตถุประสงค์ของโครงการ</th>
             <th>หน่วยงานดำเนินการ</th>
@@ -1887,7 +1886,6 @@
             <td style="font-weight: 600; white-space: normal; min-width: 220px;">{{ $p['project_name'] }}</td>
             <td><span class="chip" style="background: {{ $im['bg'] }}; color: {{ $im['color'] }};"><span
                   class="chip-dot" style="background: {{ $im['color'] }};"></span>{{ $p['province_issue'] }}</span></td>
-            <td><span class="chip chip-cyan">{{ $p['province_guideline'] }}</span></td>
             <td class="cell-clip" title="{{ $p['rationale'] }}">{{ $p['rationale'] }}</td>
             <td class="cell-clip" title="{{ $p['objective'] }}">{{ $p['objective'] }}</td>
             <td class="cell-clip" title="{{ $p['operating_agency'] }}">{{ $p['operating_agency'] }}</td>
@@ -1897,13 +1895,13 @@
           </tr>
           @empty
           <tr>
-            <td colspan="10" class="empty-cell">ยังไม่มีข้อมูลโครงการ</td>
+            <td colspan="9" class="empty-cell">ยังไม่มีข้อมูลโครงการ</td>
           </tr>
           @endforelse
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="9" style="text-align: right; font-weight: 600; color: var(--text-muted);">รวมงบประมาณทั้งสิ้น
+            <td colspan="8" style="text-align: right; font-weight: 600; color: var(--text-muted);">รวมงบประมาณทั้งสิ้น
             </td>
             <td class="num-cell" id="projTableTotal" style="color: var(--success); font-size: 15px;">{{
               number_format($kpi['total_budget']) }}</td>
