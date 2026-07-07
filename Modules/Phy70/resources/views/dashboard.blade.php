@@ -1604,7 +1604,12 @@
           </div>
           <span class="kpi-label">งบประมาณรวมทั้งหมด</span>
         </div>
-        <div class="kpi-value"><span id="kpi-total_budget">{{ number_format($kpi['total_budget']) }}</span><span class="kpi-unit">บาท</span></div>
+        @php
+            $budgetVal = $kpi['total_budget'];
+            $budgetDisplay = $budgetVal > 1000000 ? number_format($budgetVal / 1000000, 2) : number_format($budgetVal);
+            $budgetUnit = $budgetVal > 1000000 ? 'ล้านบาท' : 'บาท';
+        @endphp
+        <div class="kpi-value"><span id="kpi-total_budget">{{ $budgetDisplay }}</span><span id="kpi-total_budget-unit" class="kpi-unit">{{ $budgetUnit }}</span></div>
       </div>
 
       <div class="glass-card kpi-card">
@@ -2221,7 +2226,14 @@
             // KPIs
             setText('kpi-projects', bahtFmt(s.kpi.projects));
             setText('kpi-activities', bahtFmt(s.kpi.activities));
-            setText('kpi-total_budget', bahtFmt(s.kpi.total_budget));
+            let tb = s.kpi.total_budget || 0;
+            if (tb > 1000000) {
+                setText('kpi-total_budget', (tb / 1000000).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                setText('kpi-total_budget-unit', 'ล้านบาท');
+            } else {
+                setText('kpi-total_budget', bahtFmt(tb));
+                setText('kpi-total_budget-unit', 'บาท');
+            }
             setText('kpi-agencies', bahtFmt(s.kpi.agencies));
             setText('kpi-target_areas', bahtFmt(s.kpi.target_areas));
             setText('kpi-avg_budget', bahtFmt(s.kpi.avg_budget));

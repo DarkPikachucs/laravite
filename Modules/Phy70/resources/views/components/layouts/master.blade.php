@@ -441,7 +441,7 @@
 <body>
   <!-- Global Top Navbar -->
   <nav class="global-navbar" x-data="{ mobileMenuOpen: false }"
-    style="position: sticky; top: 0; z-index: 1000; width: 100%;">
+    style="position: {{ request()->routeIs('phy70.dashboard') ? 'relative' : 'sticky' }}; top: 0; z-index: 1000; width: 100%;">
     <div class="nav-container">
       <div class="mobile-header">
         <a href="/app/phy70" class="nav-link brand-link" style="font-size: 16px;">
