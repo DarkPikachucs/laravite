@@ -9,6 +9,9 @@ use Modules\Phy70\Models\Phy70Proposal;
 
 class Phy70Controller extends Controller
 {
+    /** Fiscal years (พ.ศ.) the plan spans — used to slice budgets by year. */
+    private const FISCAL_YEARS = ['2571', '2572', '2573', '2574', '2575'];
+
     private function guard()
     {
         return Auth::guard('phy70');
@@ -410,10 +413,14 @@ class Phy70Controller extends Controller
 
         $topProjects = $projects->sortByDesc('total_budget')->take(5)->values();
 
+        // Fiscal years for the year filter (ภาพรวม + รายปี) on the dashboard.
+        $years = self::FISCAL_YEARS;
+
         return view('phy70::dashboard', compact(
             'projects', 'details', 'kpi',
             'budgetByIssue', 'budgetByGuideline', 'budgetByAgency',
-            'activitiesByArea', 'budgetByArea', 'budgetByTargetGroup', 'topProjects'
+            'activitiesByArea', 'budgetByArea', 'budgetByTargetGroup', 'topProjects',
+            'years'
         ));
     }
 
@@ -614,6 +621,15 @@ class Phy70Controller extends Controller
             $details = [];
             foreach ($activities as $i => $a) {
                 $a = is_array($a) ? $a : [];
+
+                // Normalise the per-activity yearly budget split to all fiscal
+                // years (2571–2575) so the dashboard can slice budgets by year.
+                $rawYearly = is_array($a['yearly_budgets'] ?? null) ? $a['yearly_budgets'] : [];
+                $yearlyBudgets = [];
+                foreach (self::FISCAL_YEARS as $y) {
+                    $yearlyBudgets[$y] = (float) ($rawYearly[$y] ?? 0);
+                }
+
                 $details[] = [
                     'activity_id'        => $code . '-' . str_pad($i + 1, 2, '0', STR_PAD_LEFT),
                     'guideline'          => $this->cleanValue($a['guideline'] ?? null, $this->cleanValue($p->development_guideline, 'ไม่ระบุแนวทาง')),
@@ -621,6 +637,7 @@ class Phy70Controller extends Controller
                     'target_group'       => $this->cleanValue($a['target_group'] ?? null, $this->cleanValue($p->target_group, 'ไม่ระบุกลุ่มเป้าหมาย')),
                     'activity'           => $this->cleanValue($a['name'] ?? null, 'ไม่ระบุชื่อกิจกรรม'),
                     'budget'             => (float) ($a['budget'] ?? 0),
+                    'yearly_budgets'     => $yearlyBudgets,
                     'responsible_person' => $this->cleanValue($a['responsible_person'] ?? null, $this->cleanValue($p->responsible_person, '—')),
                     'responsible_agency' => $this->cleanValue($a['responsible_agency'] ?? null, $this->cleanValue($p->operating_agency, '—')),
                     'related_agency'     => collect($a['co_agencies'] ?? [])->pluck('name')->filter()->implode(', ') ?: '—',
