@@ -425,6 +425,18 @@ class Phy70Controller extends Controller
     }
 
     /**
+     * Project brief (แบบ จ.1-1) — แสดงรายละเอียดโครงการรายตัวในรูปแบบฟอร์ม
+     * โครงการแบบย่อ (Project Brief) ของจังหวัด. เข้าถึงได้จากการคลิกโครงการ
+     * ในหน้าแดชบอร์ด (เปิดแบบสาธารณะเช่นเดียวกับแดชบอร์ด).
+     */
+    public function projectBrief($id)
+    {
+        $proposal = Phy70Proposal::findOrFail($id);
+
+        return view('phy70::project-brief', compact('proposal'));
+    }
+
+    /**
      * Linkage view — วิเคราะห์ความเชื่อมโยง/ทับซ้อนของ "ประเด็นการพัฒนา"
      * ข้ามหน่วยงาน: หน่วยงานใดบ้างที่เสนอโครงการอยู่ในประเด็นเดียวกัน
      * (ทับซ้อนข้ามหน่วยงาน) และหน่วยงานใดเสนอซ้ำหลายโครงการในประเด็นเดียวกัน.
@@ -645,6 +657,7 @@ class Phy70Controller extends Controller
             }
 
             return [
+                'db_id'              => $p->id,
                 'project_id'         => $code,
                 'project_name'       => $this->cleanValue($p->project_name, 'ไม่ระบุชื่อโครงการ'),
                 'province_issue'     => $this->cleanValue($p->province_issue, 'ไม่ระบุประเด็น'),

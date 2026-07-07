@@ -269,6 +269,37 @@
   $stackedTotals = [];
   foreach ($years as $y) { $stackedTotals[] = $scopes[$y]['kpi']['total_budget']; }
 
+  // ---- Per-issue project drilldown payload --------------------------
+  // จัดกลุ่มโครงการตาม "ประเด็น" พร้อมกิจกรรมของแต่ละโครงการ และแนบ pindex/dindex
+  // (ลำดับเดียวกับตาราง data-pindex/data-dindex) เพื่อให้ modal คำนวณงบตามปีที่เลือกได้
+  $issueProjects = [];
+  $dIdx = 0;
+  foreach ($projects as $pi => $p) {
+  $isName = $p['province_issue'];
+  $acts = [];
+  foreach ($p['details'] as $d) {
+  $acts[] = [
+  'dindex' => $dIdx,
+  'activity' => $d['activity'],
+  'guideline' => $d['guideline'],
+  'target_area' => $d['target_area'],
+  'target_group' => $d['target_group'],
+  'budget' => $d['budget'],
+  ];
+  $dIdx++;
+  }
+  $issueProjects[$isName][] = [
+  'pindex' => $pi,
+  'db_id' => $p['db_id'],
+  'id' => $p['project_id'],
+  'name' => $p['project_name'],
+  'agency' => $p['operating_agency'],
+  'guideline' => $p['province_guideline'],
+  'budget' => $p['total_budget'],
+  'acts' => $acts,
+  ];
+  }
+
   // ---- Inline SVG path library --------------------------------------
   $svgIcons = [
   'activity' => '
@@ -715,11 +746,36 @@
       padding: 18px 18px 16px;
       overflow: hidden;
       transition: var(--transition-smooth);
+      cursor: pointer;
     }
 
     .issue-card:hover {
       box-shadow: var(--shadow-hover);
       transform: translateY(-2px);
+    }
+
+    .issue-card:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    /* affordance: "คลิกเพื่อดูรายโครงการ" ที่มุมล่างขวาของการ์ด */
+    .issue-drill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+
+    .issue-drill svg {
+      transition: transform 0.25s ease;
+    }
+
+    .issue-card:hover .issue-drill svg {
+      transform: translateX(3px);
     }
 
     .issue-accent {
@@ -1145,6 +1201,261 @@
       background: linear-gradient(135deg, var(--primary), var(--secondary));
       color: #fff;
     }
+
+    /* ===== Issue drilldown modal (รายละเอียดรายโครงการต่อประเด็น) ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow-hover);
+      width: min(880px, 100%);
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(16px) scale(0.98);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.open .modal-panel {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-head {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-head-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+    }
+
+    .modal-head-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 13px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'Prompt', sans-serif;
+      color: var(--text-main);
+      line-height: 1.35;
+    }
+
+    .modal-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .modal-sub b {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+
+    .modal-close:hover {
+      border-color: var(--border-hover);
+      color: var(--text-main);
+      background: var(--bg-base);
+    }
+
+    .modal-body {
+      padding: 18px 24px 24px;
+      overflow-y: auto;
+    }
+
+    .mp-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      background: #fff;
+    }
+
+    .mp-card:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Clickable project card → opens the จ.1-1 project brief */
+    a.mp-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    a.mp-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .mp-brief-hint {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .mp-brief-hint svg {
+      transition: transform 0.25s ease;
+    }
+
+    a.mp-card:hover .mp-brief-hint svg {
+      transform: translateX(3px);
+    }
+
+    .mp-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .mp-name {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    .mp-meta {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+    }
+
+    .mp-budget {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .mp-budget-val {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .mp-budget-lbl {
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    .mp-acts {
+      margin-top: 12px;
+      border-top: 1px dashed var(--border);
+      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mp-act {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12.5px;
+    }
+
+    .mp-act-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--text-faint);
+    }
+
+    .mp-act-name {
+      flex: 1;
+      min-width: 0;
+      color: var(--text-main);
+    }
+
+    .mp-act-area {
+      color: var(--text-muted);
+      font-size: 11.5px;
+      white-space: nowrap;
+    }
+
+    .mp-act-budget {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--text-main);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .mp-act.is-zero,
+    .mp-card.is-zero {
+      opacity: 0.4;
+    }
+
+    @media (max-width: 560px) {
+      .mp-top {
+        flex-direction: column;
+      }
+
+      .mp-budget {
+        text-align: left;
+      }
+    }
   </style>
 
   <div class="bg-glow-1"></div>
@@ -1349,7 +1660,8 @@
       <div class="issue-grid">
         @forelse($budgetByIssue as $issue => $budget)
         @php $m = $issueMeta[$issue] ?? $issueDefault; @endphp
-        <div class="issue-card" data-issue="{{ $issue }}">
+        <div class="issue-card" data-issue="{{ $issue }}" role="button" tabindex="0"
+          aria-label="ดูรายละเอียดรายโครงการของประเด็น {{ $issue }}">
           <div class="issue-accent" style="background: {{ $m['color'] }};"></div>
           <div class="issue-top">
             <div class="issue-icon" style="background: {{ $m['bg'] }};">
@@ -1367,6 +1679,14 @@
           <div class="issue-bar">
             <div class="issue-bar-fill js-issue-bar"
               style="width: {{ round($budget / $maxIssueBudget * 100) }}%; background: {{ $m['color'] }};"></div>
+          </div>
+          <div class="issue-drill" style="color: {{ $m['color'] }};">
+            คลิกเพื่อดูรายโครงการ
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
           </div>
         </div>
         @empty
@@ -1641,6 +1961,28 @@
       </table>
     </div>
   </div>
+
+  <!-- Issue drilldown modal (รายละเอียดรายโครงการต่อประเด็น) -->
+  <div class="modal-overlay" id="issueModal" role="dialog" aria-modal="true" aria-labelledby="issueModalTitle">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <div class="modal-head-accent" id="issueModalAccent"></div>
+        <div class="modal-head-icon" id="issueModalIcon"></div>
+        <div style="min-width: 0; flex: 1;">
+          <div class="modal-title" id="issueModalTitle">—</div>
+          <div class="modal-sub" id="issueModalSub"></div>
+        </div>
+        <button type="button" class="modal-close" id="issueModalClose" aria-label="ปิด">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="issueModalBody"></div>
+    </div>
+  </div>
   @endif
   </div>
 
@@ -1650,6 +1992,15 @@
         const SCOPES = @json($scopes);
         const YEARS  = @json($years);
         const STACKED = { years: @json($years), series: @json($stackedSeries), totals: @json($stackedTotals) };
+
+        // Per-issue project drilldown (สำหรับ modal รายโครงการต่อประเด็น)
+        const ISSUE_PROJECTS = @json($issueProjects);
+        const ISSUE_META     = @json($issueMeta);
+        const ISSUE_DEFAULT  = @json($issueDefault);
+        const SVG_ICONS      = @json($svgIcons);
+        // URL แม่แบบสำหรับหน้ารายละเอียดโครงการ (แบบ จ.1-1) — แทน __ID__ ด้วย db_id
+        const BRIEF_URL      = @json(route('phy70.project.brief', ['id' => '__ID__']));
+        let currentScope = 'overview';   // อัปเดตตามปุ่มปีที่เลือก เพื่อให้ modal ใช้งบปีเดียวกัน
 
         const bahtFmt = (v) => new Intl.NumberFormat('th-TH').format(Math.round(v || 0));
         const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1864,6 +2215,8 @@
             const s = SCOPES[key];
             if (!s) return;
             const isOverview = key === 'overview';
+            currentScope = key;
+            if (issueModal.classList.contains('open') && openIssueName) openIssueModal(openIssueName);
 
             // KPIs
             setText('kpi-projects', bahtFmt(s.kpi.projects));
@@ -1946,6 +2299,98 @@
                 setTimeout(() => areaMap.invalidateSize(), 120);
             });
         });
+
+        // ================= Issue drilldown modal =================
+        // คลิกการ์ดประเด็น → แสดงรายโครงการ (พร้อมกิจกรรม) ของประเด็นนั้น
+        // งบที่แสดงอิงตามปีที่เลือก (currentScope) — projBudget/detailBudget ตาม index
+        const issueModal = document.getElementById('issueModal');
+        let openIssueName = null;
+
+        function openIssueModal(name) {
+            const projects = ISSUE_PROJECTS[name] || [];
+            const meta = ISSUE_META[name] || ISSUE_DEFAULT;
+            const scope = SCOPES[currentScope] || SCOPES.overview;
+            const pBud = scope.projBudget || [];
+            const dBud = scope.detailBudget || [];
+            openIssueName = name;
+
+            // เตรียมรายการโครงการพร้อมงบตามสโคป แล้วเรียงงบมาก→น้อย
+            let totalBudget = 0, activeCount = 0;
+            const rows = projects.map(p => {
+                const b = pBud[p.pindex] != null ? pBud[p.pindex] : p.budget;
+                totalBudget += b;
+                if (b > 0) activeCount++;
+                return { p, b };
+            }).sort((a, b) => b.b - a.b);
+
+            // Header
+            document.getElementById('issueModalAccent').style.background = meta.color;
+            const iconEl = document.getElementById('issueModalIcon');
+            iconEl.style.background = meta.bg;
+            iconEl.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="' + meta.color +
+                '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (SVG_ICONS[meta.icon] || SVG_ICONS.flag) + '</svg>';
+            document.getElementById('issueModalTitle').textContent = name;
+            const scopeLabel = currentScope === 'overview' ? 'ทุกปีงบประมาณ' : ('ปีงบประมาณ ' + currentScope);
+            document.getElementById('issueModalSub').innerHTML =
+                '<b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
+
+            // Body — การ์ดต่อโครงการ + รายการกิจกรรม
+            const body = document.getElementById('issueModalBody');
+            if (!rows.length) {
+                body.innerHTML = '<div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลโครงการในประเด็นนี้</div></div>';
+            } else {
+                body.innerHTML = rows.map(({ p, b }) => {
+                    const acts = (p.acts || []).map(a => {
+                        const ab = dBud[a.dindex] != null ? dBud[a.dindex] : a.budget;
+                        return '<div class="mp-act' + (ab <= 0 ? ' is-zero' : '') + '">' +
+                            '<span class="mp-act-dot" style="background:' + meta.color + ';"></span>' +
+                            '<span class="mp-act-name">' + esc(a.activity || a.guideline || 'กิจกรรม') + '</span>' +
+                            '<span class="mp-act-area">' + esc(a.target_area || '') + '</span>' +
+                            '<span class="mp-act-budget">' + bahtFmt(ab) + ' ฿</span></div>';
+                    }).join('');
+                    const href = p.db_id != null ? BRIEF_URL.replace('__ID__', encodeURIComponent(p.db_id)) : null;
+                    const hint = href
+                        ? '<div class="mp-brief-hint" style="color:' + meta.color + ';">ดูรายละเอียดโครงการ (แบบ จ.1-1)' +
+                          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>'
+                        : '';
+                    const open = href ? '<a class="mp-card' + (b <= 0 ? ' is-zero' : '') + '" href="' + href + '">' : '<div class="mp-card' + (b <= 0 ? ' is-zero' : '') + '">';
+                    const close = href ? '</a>' : '</div>';
+                    return open +
+                        '<div class="mp-top">' +
+                        '<div style="flex:1;min-width:0;">' +
+                        '<div class="mp-name">' + esc(p.name) + '</div>' +
+                        '<div class="mp-meta">' +
+                        '<span>รหัส: ' + esc(p.id) + '</span>' +
+                        '<span>หน่วยงาน: ' + esc(p.agency || '—') + '</span>' +
+                        (p.guideline ? '<span>แนวทาง: ' + esc(p.guideline) + '</span>' : '') +
+                        '</div></div>' +
+                        '<div class="mp-budget"><div class="mp-budget-val" style="color:' + meta.color + ';">' + bahtFmt(b) + '</div>' +
+                        '<div class="mp-budget-lbl">บาท</div></div></div>' +
+                        (acts ? '<div class="mp-acts">' + acts + '</div>' : '') +
+                        hint +
+                        close;
+                }).join('');
+            }
+
+            issueModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeIssueModal() {
+            issueModal.classList.remove('open');
+            document.body.style.overflow = '';
+            openIssueName = null;
+        }
+
+        document.querySelectorAll('.issue-card[data-issue]').forEach(card => {
+            card.addEventListener('click', () => openIssueModal(card.dataset.issue));
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openIssueModal(card.dataset.issue); }
+            });
+        });
+        document.getElementById('issueModalClose').addEventListener('click', closeIssueModal);
+        issueModal.addEventListener('click', (e) => { if (e.target === issueModal) closeIssueModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && issueModal.classList.contains('open')) closeIssueModal(); });
   </script>
   @endunless
 </x-phy70::layouts.master>
