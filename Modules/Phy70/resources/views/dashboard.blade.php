@@ -1650,7 +1650,12 @@
           </div>
           <span class="kpi-label">งบประมาณเฉลี่ย/โครงการ</span>
         </div>
-        <div class="kpi-value"><span id="kpi-avg_budget">{{ number_format($kpi['avg_budget']) }}</span><span class="kpi-unit">บาท</span></div>
+        @php
+            $avgBudgetVal = $kpi['avg_budget'];
+            $avgBudgetDisplay = $avgBudgetVal > 1000000 ? number_format($avgBudgetVal / 1000000, 2) : number_format($avgBudgetVal);
+            $avgBudgetUnit = $avgBudgetVal > 1000000 ? 'ล้านบาท' : 'บาท';
+        @endphp
+        <div class="kpi-value"><span id="kpi-avg_budget">{{ $avgBudgetDisplay }}</span><span id="kpi-avg_budget-unit" class="kpi-unit">{{ $avgBudgetUnit }}</span></div>
       </div>
     </div>
 
@@ -1663,7 +1668,7 @@
       </h3>
       <p class="section-sub">งบประมาณและจำนวนโครงการแยกตามประเด็นการพัฒนา — แต่ละประเด็นมีสีและไอคอนกำกับ</p>
       <div class="issue-grid">
-        @forelse($budgetByIssue as $issue => $budget)
+        @forelse(collect($budgetByIssue)->sortKeys() as $issue => $budget)
         @php $m = $issueMeta[$issue] ?? $issueDefault; @endphp
         <div class="issue-card" data-issue="{{ $issue }}" role="button" tabindex="0"
           aria-label="ดูรายละเอียดรายโครงการของประเด็น {{ $issue }}">
@@ -2236,7 +2241,14 @@
             }
             setText('kpi-agencies', bahtFmt(s.kpi.agencies));
             setText('kpi-target_areas', bahtFmt(s.kpi.target_areas));
-            setText('kpi-avg_budget', bahtFmt(s.kpi.avg_budget));
+            let ab = s.kpi.avg_budget || 0;
+            if (ab > 1000000) {
+                setText('kpi-avg_budget', (ab / 1000000).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                setText('kpi-avg_budget-unit', 'ล้านบาท');
+            } else {
+                setText('kpi-avg_budget', bahtFmt(ab));
+                setText('kpi-avg_budget-unit', 'บาท');
+            }
 
             // Issue cards
             const issueByName = {}; s.issues.forEach(i => issueByName[i.name] = i);
