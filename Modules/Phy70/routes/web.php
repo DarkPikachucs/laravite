@@ -15,6 +15,9 @@ Route::prefix('app/phy70')->group(function () {
     // Project brief (แบบ จ.1-1) — รายละเอียดโครงการรายตัวจากแดชบอร์ด
     Route::get('/project/{id}/brief', [Phy70Controller::class, 'projectBrief'])->name('phy70.project.brief');
 
+    // Issue summary (แบบ จ.1 เวอร์ชันโครงการ) — สรุปโครงการรายประเด็น (?issue=ชื่อประเด็น)
+    Route::get('/issue-summary', [Phy70Controller::class, 'issueSummary'])->name('phy70.issue.summary');
+
     // Linkage — ความเชื่อมโยง/ทับซ้อนของประเด็นข้ามหน่วยงาน
     Route::get('/linkage', [Phy70Controller::class, 'linkage'])->name('phy70.linkage');
 

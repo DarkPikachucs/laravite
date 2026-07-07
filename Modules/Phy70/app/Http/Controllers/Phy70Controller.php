@@ -453,6 +453,87 @@ class Phy70Controller extends Controller
     }
 
     /**
+     * ตัวชี้วัดและค่าเป้าหมายรายปี (พ.ศ. 2571–2575) ต่อ "ประเด็นการพัฒนา".
+     * แหล่งข้อมูลเดียวกับ issuesData ในฟอร์มสร้างข้อเสนอ (proposals/create.blade.php)
+     * ใช้เรนเดอร์แบบ จ.1 (เวอร์ชันโครงการ). คีย์ = ชื่อประเด็น (ตรงกับ province_issue).
+     */
+    private static function issuesKpiData(): array
+    {
+        return [
+            'ประเด็นการพัฒนาที่ 1 การพัฒนาการท่องเที่ยวมูลค่าสูงเชิงสร้างสรรค์บนฐานอัตลักษณ์ของพื้นที่' => [
+                ['name' => 'รายได้จากการท่องเที่ยวเพิ่มขึ้น', 'base_year' => 2568, 'base_value' => '9,981.97 ล้านบาท', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'จำนวนของสถานประกอบการด้านการท่องเที่ยวได้รับมาตรฐานเพิ่มขึ้น', 'base_year' => 2568, 'base_value' => null, 'target_unit' => 'ร้อยละ', 'targets' => [10, 10, 10, 10, 10]],
+            ],
+            'ประเด็นการพัฒนาที่ 2 การพัฒนาการเกษตรมูลค่าสูงอย่างยั่งยืน' => [
+                ['name' => 'GPP จังหวัดภาคเกษตรเพิ่มขึ้น', 'base_year' => 2567, 'base_value' => '32,564 ล้านบาท', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'ผลิตภาพแรงงานภาคเกษตร เพิ่มขึ้น', 'base_year' => 2567, 'base_value' => '155,514.70 บาท/คน/ปี', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'จำนวนเกษตรกรที่ได้รับมาตรฐานสินค้าเกษตรมูลค่าสูง เพิ่มขึ้น', 'base_year' => 2567, 'base_value' => '1,938 ราย', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+            ],
+            'ประเด็นการพัฒนาที่ 3 การพัฒนาความมั่นคง คุณภาพชีวิต การศึกษา และผลิตภาพคนทุกช่วงวัย' => [
+                ['name' => 'ร้อยละผลิตภัณฑ์มวลรวมจังหวัดต่อคนเพิ่มขึ้น', 'base_year' => 2567, 'base_value' => '107,129 บาท', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'จำนวนปีการศึกษาเฉลี่ยของประชากร', 'base_year' => 2567, 'base_value' => '9.70 ปี', 'target_unit' => 'ปี', 'targets' => [10.5, 10.5, 10.5, 11.5, 11.5]],
+                ['name' => 'จำนวนคดียาเสพติดลดลง', 'base_year' => 2567, 'base_value' => '3,085 คดี', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'อัตราส่วนแพทย์ต่อประชากร', 'base_year' => 2568, 'base_value' => '1:3,366', 'target_unit' => 'สัดส่วน', 'targets' => ['1:2,500', '1:2,500', '1:2,300', '1:2,300', '1:2,000']],
+            ],
+            'ประเด็นการพัฒนาที่ 4 การส่งเสริมการเจริญเติบโตทางเศรษฐกิจที่ยั่งยืน' => [
+                ['name' => 'ผลิตภัณฑ์มวลรวมจังหวัด (GPP)', 'base_year' => 2567, 'base_value' => '95,455 ล้านบาท', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'ผลิตภัณฑ์มวลรวมจังหวัด (GPP) ภาคอุตสาหกรรม', 'base_year' => 2567, 'base_value' => '.......ล้านบาท', 'target_unit' => 'ร้อยละ', 'targets' => [3, 3, 3, 3, 3]],
+                ['name' => 'จำนวนสถานประกอบการที่ผ่านเกณฑ์อุตสาหกรรมสีเขียว ระดับ 2', 'base_year' => 2568, 'base_value' => '23 แห่ง', 'target_unit' => 'ร้อยละ', 'targets' => [3, 3, 3, 3, 3]],
+            ],
+            'ประเด็นการพัฒนาที่ 5 การบริหารจัดการทรัพยากรธรรมชาติและสิ่งแวดล้อมเพื่อความสมดุล' => [
+                ['name' => 'สัดส่วนปริมาณขยะที่กำจัดได้อย่างถูกต้องต่อปริมาณขยะที่เกิดขึ้นเพิ่มขึ้น', 'base_year' => 2568, 'base_value' => '19.53', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+                ['name' => 'ร้อยละประชากรที่ประสบภัยพิบัติ (อัคคีภัย วาตภัย อุทกภัย ภัยแล้ง)', 'base_year' => 2568, 'base_value' => '9.42', 'target_unit' => 'ร้อยละ', 'targets' => [5, 5, 5, 5, 5]],
+            ],
+        ];
+    }
+
+    /**
+     * แบบ จ.1 (เวอร์ชันโครงการ) — สรุปโครงการภายใต้ "ประเด็นการพัฒนา" ที่เลือก.
+     * แต่ละแถว = โครงการ พร้อมตัวชี้วัดที่โครงการตอบสนอง และค่าเป้าหมายรายปี (2571–2575).
+     * เข้าถึงจากปุ่มใน modal ประเด็นบนแดชบอร์ด (?issue=ชื่อประเด็น).
+     */
+    public function issueSummary(Request $request)
+    {
+        $issue = trim((string) $request->query('issue', ''));
+        $fiscalYears = self::FISCAL_YEARS;
+
+        // ตัวชี้วัด + ค่าเป้าหมายรายปีของประเด็นนี้ (ระดับประเด็น)
+        $issueKpis = self::issuesKpiData()[$issue] ?? [];
+        $kpiByName = collect($issueKpis)->keyBy('name');
+
+        // โครงการทั้งหมดในประเด็นนี้
+        $proposals = $issue === ''
+            ? collect()
+            : Phy70Proposal::where('province_issue', $issue)->orderByDesc('id')->get();
+
+        $projects = $proposals->map(function ($p) use ($issueKpis, $kpiByName) {
+            $activities = is_array($p->activities) ? $p->activities : [];
+            $budget = collect($activities)->sum(fn ($a) => (float) ($a['budget'] ?? 0));
+
+            // ตชว.ที่โครงการเลือกตอบสนอง — ถ้าไม่มี → fallback แสดง ตชว. ทั้งหมดของประเด็น
+            $selectedNames = collect(is_array($p->kpis) ? $p->kpis : [])
+                ->filter(fn ($k) => is_array($k) && !empty($k['selected']) && !empty($k['name']))
+                ->pluck('name');
+
+            $kpis = $selectedNames->isNotEmpty()
+                ? $selectedNames->map(fn ($n) => $kpiByName->get($n)
+                    ?? ['name' => $n, 'target_unit' => null, 'base_year' => null, 'base_value' => null, 'targets' => []])
+                    ->values()->all()
+                : $issueKpis;
+
+            return [
+                'name'   => $this->cleanValue($p->project_name, 'ไม่ระบุชื่อโครงการ'),
+                'code'   => $this->cleanValue($p->project_code, 'PJ-' . $p->id),
+                'agency' => $this->cleanValue($p->operating_agency, 'ไม่ระบุหน่วยงาน'),
+                'budget' => $budget,
+                'kpis'   => $kpis,
+            ];
+        })->values();
+
+        return view('phy70::issue-summary', compact('issue', 'projects', 'issueKpis', 'fiscalYears'));
+    }
+
+    /**
      * Linkage view — วิเคราะห์ความเชื่อมโยง/ทับซ้อนของ "ประเด็นการพัฒนา"
      * ข้ามหน่วยงาน: หน่วยงานใดบ้างที่เสนอโครงการอยู่ในประเด็นเดียวกัน
      * (ทับซ้อนข้ามหน่วยงาน) และหน่วยงานใดเสนอซ้ำหลายโครงการในประเด็นเดียวกัน.

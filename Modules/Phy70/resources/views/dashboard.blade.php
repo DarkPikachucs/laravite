@@ -1287,6 +1287,36 @@
       color: var(--text-main);
     }
 
+    /* "ดูรายละเอียด (แบบ จ.1)" — ลิงก์ไปหน้าสรุปโครงการรายประเด็น */
+    .modal-summary-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .modal-summary-link svg {
+      transition: transform 0.25s ease;
+    }
+
+    .modal-summary-link:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-1px);
+    }
+
+    .modal-summary-link:hover svg:last-child {
+      transform: translateX(3px);
+    }
+
     .modal-close {
       position: absolute;
       top: 16px;
@@ -1979,6 +2009,20 @@
         <div style="min-width: 0; flex: 1;">
           <div class="modal-title" id="issueModalTitle">—</div>
           <div class="modal-sub" id="issueModalSub"></div>
+          <a id="issueModalSummary" class="modal-summary-link" href="#" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18" />
+              <path d="M9 21V9" />
+            </svg>
+            ดูรายละเอียด (แบบ จ.1)
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </a>
         </div>
         <button type="button" class="modal-close" id="issueModalClose" aria-label="ปิด">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -2008,6 +2052,8 @@
         const SVG_ICONS      = @json($svgIcons);
         // URL แม่แบบสำหรับหน้ารายละเอียดโครงการ (แบบ จ.1-1) — แทน __ID__ ด้วย db_id
         const BRIEF_URL      = @json(route('phy70.project.brief', ['id' => '__ID__']));
+        // URL หน้าสรุปโครงการรายประเด็น (แบบ จ.1) — ต่อท้ายด้วย ?issue=ชื่อประเด็น
+        const SUMMARY_URL    = @json(route('phy70.issue.summary'));
         let currentScope = 'overview';   // อัปเดตตามปุ่มปีที่เลือก เพื่อให้ modal ใช้งบปีเดียวกัน
 
         const bahtFmt = (v) => new Intl.NumberFormat('th-TH').format(Math.round(v || 0));
@@ -2355,6 +2401,14 @@
             const scopeLabel = currentScope === 'overview' ? 'ทุกปีงบประมาณ' : ('ปีงบประมาณ ' + currentScope);
             document.getElementById('issueModalSub').innerHTML =
                 '<b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
+
+            // ปุ่ม "ดูรายละเอียด (แบบ จ.1)" → หน้าสรุปโครงการรายประเด็น
+            const summaryLink = document.getElementById('issueModalSummary');
+            if (summaryLink) {
+                summaryLink.href = SUMMARY_URL + '?issue=' + encodeURIComponent(name);
+                summaryLink.style.color = meta.color;
+                summaryLink.style.borderColor = meta.color;
+            }
 
             // Body — การ์ดต่อโครงการ + รายการกิจกรรม
             const body = document.getElementById('issueModalBody');
