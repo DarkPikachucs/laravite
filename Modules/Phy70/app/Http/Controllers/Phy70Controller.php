@@ -93,7 +93,7 @@ class Phy70Controller extends Controller
             'yearly_budgets' => 'nullable|array',
             'yearly_budgets.*' => 'nullable|numeric|min:0',
             'activities' => 'nullable|array',
-            'activities.*.name' => $req . '|string|max:255',
+            'activities.*.name' => $req . '|string',
             'activities.*.budget' => $req . '|numeric|min:0',
             'activities.*.yearly_budgets' => 'nullable|array',
             'activities.*.yearly_budgets.*' => 'nullable|numeric|min:0',
@@ -209,6 +209,22 @@ class Phy70Controller extends Controller
         return view('phy70::proposals.show', compact('proposal'));
     }
 
+    public function showCanvas($id)
+    {
+        $user = $this->guard()->user();
+        if (!$user) {
+            return redirect('/app/phy70/login');
+        }
+
+        $query = Phy70Proposal::query();
+        if ($user->role !== 'superadmin') {
+            $query->where('organization_id', $user->organization_id);
+        }
+        $proposal = $query->findOrFail($id);
+
+        return view('phy70::proposals.canvas', compact('proposal'));
+    }
+
     public function editProposal($id)
     {
         $user = $this->guard()->user();
@@ -281,7 +297,7 @@ class Phy70Controller extends Controller
             'yearly_budgets' => 'nullable|array',
             'yearly_budgets.*' => 'nullable|numeric|min:0',
             'activities' => 'nullable|array',
-            'activities.*.name' => $req . '|string|max:255',
+            'activities.*.name' => $req . '|string',
             'activities.*.budget' => $req . '|numeric|min:0',
             'activities.*.yearly_budgets' => 'nullable|array',
             'activities.*.yearly_budgets.*' => 'nullable|numeric|min:0',

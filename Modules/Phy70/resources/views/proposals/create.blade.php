@@ -490,9 +490,12 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
               <div class="form-group">
                 <label class="form-label">งบประมาณรวม (บาท) <span style="color: var(--danger);">*</span></label>
                 <input type="number" :name="'activities['+index+'][budget]'" class="form-control"
-                  :value="getActivityBudget(act)" readonly style="background-color: rgba(0,0,0,0.05); cursor: not-allowed;" required>
-                <div x-show="formData.operating_year" x-transition style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; text-align: center;">
-                  <label class="form-label" style="font-size: 12px; margin-bottom: 8px; text-align: center; display: block;">แยกตามปีงบประมาณ</label>
+                  :value="getActivityBudget(act)" readonly
+                  style="background-color: rgba(0,0,0,0.05); cursor: not-allowed;" required>
+                <div x-show="formData.operating_year" x-transition
+                  style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; text-align: center;">
+                  <label class="form-label"
+                    style="font-size: 12px; margin-bottom: 8px; text-align: center; display: block;">แยกตามปีงบประมาณ</label>
                   <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
                     <template x-for="year in years.filter(y => y <= formData.operating_year)" :key="year">
                       <div style="flex: 1; min-width: 100px; max-width: 140px;">
@@ -945,7 +948,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 "ส่งเสริมผู้สูงอายุให้มีศักยภาพและมีส่วนร่วมในสังคม",
                 "การใช้เทคโนโลยีในการขยายการเข้าถึงบริการ และยกระดับการดูแลคุณภาพชีวิตให้คนทุกช่วงวัย",
                 "พัฒนาระบบบริการสุขภาพ และเสริมสร้างระบบสาธารณสุขให้มีความพร้อม",
-                "การสร้างความสงบสุข มั่นคงในชีวิตและทรัพย์สิน"
+                "การสร้างความสงบสุข มั่นคงในชีวิตและทรัพย์สิน",
+                "ส่งเสริมกีฬาและนันทนาการเพื่อพัฒนาคุณภาพชีวิต",                
             ],
             "ประเด็นการพัฒนาที่ 4 การส่งเสริมการเจริญเติบโตทางเศรษฐกิจที่ยั่งยืน": [
                 "พัฒนาโครงสร้างพื้นฐานเพื่อสนับสนุนการเจริญเติบโตทางเศรษฐกิจ",
@@ -957,7 +961,8 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 "พัฒนาคลัสเตอร์อุตสาหกรรมที่สอดคล้องกับศักยภาพของพื้นที่",
                 "จัดทำแนวทางการรองรับความเสี่ยงทางเศรษฐกิจจากปัจจัยทางภูมิรัฐศาสตร์",
                 "การพัฒนาผู้ประกอบการชุมชน วิสาหกิจขนาดกลางและขนาดย่อม",
-                "การขยายฐานตลาดสู่ห่วงโซ่เศรษฐกิจภูมิภาค ด้วยเทคโนโลยี"
+                "การขยายฐานตลาดสู่ห่วงโซ่เศรษฐกิจภูมิภาค ด้วยเทคโนโลยี",
+                "สร้างมูลค่าทางเศรษฐกิจจากการส่งเสริมกีฬาและนันทนาการ"
             ],
             "ประเด็นการพัฒนาที่ 5 การบริหารจัดการทรัพยากรธรรมชาติและสิ่งแวดล้อมเพื่อความสมดุล": [
                 "พัฒนาโครงสร้างพื้นฐาน การพัฒนาระนิเวศเมืองอัจฉริยะ และระบบการบริหารจัดการทรัพยากรธรรมชาติอย่างเป็นระบบ",

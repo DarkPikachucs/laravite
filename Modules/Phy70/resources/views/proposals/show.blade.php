@@ -148,6 +148,14 @@
     <header class="header">
       <h2 class="title">รายละเอียดข้อเสนอโครงการ</h2>
       <div style="display: flex; gap: 12px;">
+        <a href="{{ route('phy70.proposal.canvas', $proposal->id) }}" target="_blank" class="btn-secondary"
+          style="background: linear-gradient(135deg, rgba(37,99,235,0.1) 0%, rgba(79,70,229,0.1) 100%); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); display: flex; align-items: center; gap: 6px;">
+          📄 View Project Canvas
+        </a>
+        {{-- <button onclick="document.getElementById('ai-prompt-modal').style.display='flex'" class="btn-secondary"
+          style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(99,102,241,0.1) 100%); color: var(--secondary); border: 1px solid rgba(6,182,212,0.3);">
+          ✨ Export AI Prompt
+        </button> --}}
         @if($proposal->status === 'draft')
         <a href="{{ route('phy70.proposal.edit', $proposal->id) }}" class="btn-secondary"
           style="background: rgba(99, 102, 241, 0.1); border-color: var(--primary); color: var(--primary); display: flex; align-items: center; gap: 6px;">
@@ -275,56 +283,59 @@
     $totalBudget = collect($proposal->activities)->sum(function($act) { return (float)($act['budget'] ?? 0); });
     $totalYearlyBudgets = [];
     if (!empty($proposal->activities)) {
-        foreach ($proposal->activities as $act) {
-            if (!empty($act['yearly_budgets']) && is_array($act['yearly_budgets'])) {
-                foreach ($act['yearly_budgets'] as $year => $budget) {
-                    if (is_numeric($budget)) {
-                        $totalYearlyBudgets[$year] = ($totalYearlyBudgets[$year] ?? 0) + (float)$budget;
-                    }
-                }
-            }
-        }
+    foreach ($proposal->activities as $act) {
+    if (!empty($act['yearly_budgets']) && is_array($act['yearly_budgets'])) {
+    foreach ($act['yearly_budgets'] as $year => $budget) {
+    if (is_numeric($budget)) {
+    $totalYearlyBudgets[$year] = ($totalYearlyBudgets[$year] ?? 0) + (float)$budget;
+    }
+    }
+    }
+    }
     }
     @endphp
 
     <div class="info-item" style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1);">
-      <div class="info-label" style="font-size: 15px; font-weight: 600; color: var(--secondary); margin-bottom: 12px;">งบประมาณรวมทั้งโครงการ</div>
+      <div class="info-label" style="font-size: 15px; font-weight: 600; color: var(--secondary); margin-bottom: 12px;">
+        งบประมาณรวมทั้งโครงการ</div>
       <div class="info-val" style="font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 16px;">
-        {{ number_format($totalBudget, 2) }} <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">บาท</span>
+        {{ number_format($totalBudget, 2) }} <span
+          style="font-size: 14px; font-weight: 400; color: var(--text-muted);">บาท</span>
       </div>
-      
+
       @if(!empty($totalYearlyBudgets))
-      <div style="padding: 16px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">งบประมาณรวมแยกตามปีงบประมาณ</div>
+      <div
+        style="padding: 16px; background: rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; text-align: center;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">
+          งบประมาณรวมแยกตามปีงบประมาณ</div>
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
           @foreach($years as $year)
-            @if($year <= $operatingYear && isset($totalYearlyBudgets[$year]))
-            <div style="flex: 1; min-width: 100px; max-width: 150px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">ปี {{ $year }}</div>
-              <div style="font-weight: 600; font-size: 15px; color: var(--primary);">
-                {{ number_format($totalYearlyBudgets[$year], 2) }}
-              </div>
+          @if($year <= $operatingYear && isset($totalYearlyBudgets[$year])) <div
+            style="flex: 1; min-width: 100px; max-width: 150px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">ปี {{ $year }}</div>
+            <div style="font-weight: 600; font-size: 15px; color: var(--primary);">
+              {{ number_format($totalYearlyBudgets[$year], 2) }}
             </div>
-            @endif
-          @endforeach
         </div>
-      </div>
-      @endif
-    </div>
-    @if($proposal->attachments && count($proposal->attachments) > 0)
-    <div class="info-item"
-      style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px;">
-      <div class="info-label" style="color: var(--secondary);">ไฟล์แนบประกอบโครงการ</div>
-      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-        @foreach($proposal->attachments as $attachment)
-        <a href="{{ $attachment['path'] }}" target="_blank" class="info-val"
-          style="display: flex; align-items: center; gap: 10px; text-decoration: none; background: rgba(99, 102, 241, 0.08);">
-          <span>📄 {{ $attachment['name'] }}</span>
-        </a>
+        @endif
         @endforeach
       </div>
     </div>
     @endif
+  </div>
+  @if($proposal->attachments && count($proposal->attachments) > 0)
+  <div class="info-item" style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px;">
+    <div class="info-label" style="color: var(--secondary);">ไฟล์แนบประกอบโครงการ</div>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+      @foreach($proposal->attachments as $attachment)
+      <a href="{{ $attachment['path'] }}" target="_blank" class="info-val"
+        style="display: flex; align-items: center; gap: 10px; text-decoration: none; background: rgba(99, 102, 241, 0.08);">
+        <span>📄 {{ $attachment['name'] }}</span>
+      </a>
+      @endforeach
+    </div>
+  </div>
+  @endif
   </div>
 
   @if($proposal->activities && count($proposal->activities) > 0)
@@ -557,4 +568,60 @@
   @endif
 
   </div>
+
+  <div id="ai-prompt-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div
+      style="background: var(--bg-base); border: 1px solid var(--border-glow); border-radius: 20px; padding: 32px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-size: 20px; font-weight: 600; color: var(--primary); font-family: 'Prompt', sans-serif;">✨ AI
+          Image Generation Prompt</h3>
+        <button onclick="document.getElementById('ai-prompt-modal').style.display='none'"
+          style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+        คัดลอกข้อความด้านล่างนี้ไปวางในเครื่องมือ AI (เช่น Midjourney, DALL-E) เพื่อสร้างรูปภาพ Project Canvas
+        ได้เลยครับ</p>
+      <div style="position: relative;">
+        <textarea id="prompt-text"
+          style="width: 100%; height: 400px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; color: var(--text-main); font-family: monospace; font-size: 14px; resize: vertical; line-height: 1.6;"
+          readonly>High-resolution professional infographic poster in a clean project canvas layout, replicating the exact structure and color scheme of image_0.png (green, blue, and orange accents on a white background).
+
+Top Banner: Replace original text with {{ $proposal->project_code ?: 'PROJECT-CODE' }} [ใส่ชื่อหัวข้อหลักภาษาอังกฤษ เช่น SMART COMMUNITY FARMING & DIGITAL ECONOMY]. Below it, add the Thai title: {{ $proposal->project_name }}, with English subtitle: [ใส่ชื่อโครงการภาษาอังกฤษ เช่น Participatory Sustainable Community Agriculture & Digital Economy Project]. Add small icons below the title representing: [Smart Farm], [Digital Platform], [Eco-Logistics], [Stronger Community].
+
+Column 1 (Green/Blue themes):
+
+Top Card: หลักการและเหตุผล (Rationale / Background) with new bullet points tailored to the project (e.g., {{ \Illuminate\Support\Str::limit(strip_tags($proposal->principles), 150) }}). Add a small illustrative icon of a farmer using a tablet.
+
+Middle Card: วัตถุประสงค์ของโครงการ (Objectives) with numbered points (blue circles) and relevant new icons (e.g., {{ \Illuminate\Support\Str::limit(strip_tags($proposal->objectives), 150) }}).
+
+Bottom: Small illustrative scene of people collaborating on modern agricultural solutions.
+
+Column 2 (Activity-based):
+
+Top Card: กิจกรรมหลัก (Key Activities) with numbered green circles and unique illustrative icons for each step (e.g., @if($proposal->activities)@foreach($proposal->activities as $index => $act) {{ $index + 1 }}. {{ $act['name'] }}, @endforeach @endif ). Include sub-points with matching small icons.
+
+Bottom Card: ทรัพยากรที่ต้องใช้ (Resources) with numbered green circles and icons representing technical experts, smart tech, budget, and infrastructure.
+
+Column 3 (Outcome and Risk focus):
+
+Top Card: ผลกระทบด้านต่างๆ (Impact Areas) with customized points and icons for Environment, Social, Economy, and Education impacts.
+
+Middle Card: ความเสี่ยงและแนวทางจัดการความเสี่ยง (Risks & Mitigation) with red-orange text title and numbered orange points, each with relevant risk icons and mitigation icons (e.g., tech resistance, data security, high costs).
+
+Bottom: Create two sub-cards with green titles: ผลลัพธ์ที่คาดหวัง (Expected Outputs / Outcomes) (e.g., {{ \Illuminate\Support\Str::limit(strip_tags($proposal->output), 100) }} and {{ \Illuminate\Support\Str::limit(strip_tags($proposal->outcome), 100) }}) and ตัวชี้วัดความสำเร็จ (Key Indicators), matching the table structure of image_0.png with project-specific data points (@if(!empty($proposal->kpis)) @foreach($proposal->kpis as $kpi) @if(isset($kpi['selected']) && $kpi['selected']) {{ $kpi['name'] }}, @endif @endforeach @endif).
+
+Footer: Replicate the landscape scene with a stylized modern community and farm featuring solar panels and eco-friendly delivery vehicles. Include a new Thai tagline: [สร้างสรรค์อนาคตที่ยั่งยืนทีละก้าวทางดิจิทัล เพื่อชุมชนที่เข้มแข็งกว่า].
+
+Style: Clean digital vector illustration, professional, organized, like a printed poster.</textarea>
+        <button
+          onclick="navigator.clipboard.writeText(document.getElementById('prompt-text').value); alert('คัดลอก Prompt เรียบร้อยแล้ว!');"
+          class="btn-secondary"
+          style="position: absolute; top: 16px; right: 24px; background: rgba(99,102,241,0.2); border-color: var(--primary); padding: 8px 16px; font-size: 13px;">
+          📋 คัดลอก
+        </button>
+      </div>
+    </div>
+  </div>
+
 </x-phy70::layouts.master>
