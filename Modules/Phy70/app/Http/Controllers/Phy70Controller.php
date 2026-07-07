@@ -497,36 +497,43 @@ class Phy70Controller extends Controller
         $issue = trim((string) $request->query('issue', ''));
         $fiscalYears = self::FISCAL_YEARS;
 
-        // ตัวชี้วัด + ค่าเป้าหมายรายปีของประเด็นนี้ (ระดับประเด็น)
+        // ตัวชี้วัดของประเด็นนี้ (ระดับประเด็น) — ใช้เป็นรายการ fallback ในคอลัมน์ตัวชี้วัด
         $issueKpis = self::issuesKpiData()[$issue] ?? [];
-        $kpiByName = collect($issueKpis)->keyBy('name');
 
         // โครงการทั้งหมดในประเด็นนี้
         $proposals = $issue === ''
             ? collect()
             : Phy70Proposal::where('province_issue', $issue)->orderByDesc('id')->get();
 
-        $projects = $proposals->map(function ($p) use ($issueKpis, $kpiByName) {
+        $projects = $proposals->map(function ($p) use ($issueKpis, $fiscalYears) {
             $activities = is_array($p->activities) ? $p->activities : [];
-            $budget = collect($activities)->sum(fn ($a) => (float) ($a['budget'] ?? 0));
+
+            // งบประมาณรายปี (พ.ศ. 2571–2575) รวมทุกกิจกรรม + งบรวมทั้งโครงการ
+            $yearly = array_fill_keys($fiscalYears, 0.0);
+            foreach ($activities as $a) {
+                $a = is_array($a) ? $a : [];
+                $ry = is_array($a['yearly_budgets'] ?? null) ? $a['yearly_budgets'] : [];
+                foreach ($fiscalYears as $y) {
+                    $yearly[$y] += (float) ($ry[$y] ?? 0);
+                }
+            }
+            $total = collect($activities)->sum(fn ($a) => (float) (is_array($a) ? ($a['budget'] ?? 0) : 0));
 
             // ตชว.ที่โครงการเลือกตอบสนอง — ถ้าไม่มี → fallback แสดง ตชว. ทั้งหมดของประเด็น
             $selectedNames = collect(is_array($p->kpis) ? $p->kpis : [])
                 ->filter(fn ($k) => is_array($k) && !empty($k['selected']) && !empty($k['name']))
-                ->pluck('name');
-
-            $kpis = $selectedNames->isNotEmpty()
-                ? $selectedNames->map(fn ($n) => $kpiByName->get($n)
-                    ?? ['name' => $n, 'target_unit' => null, 'base_year' => null, 'base_value' => null, 'targets' => []])
-                    ->values()->all()
-                : $issueKpis;
+                ->pluck('name')->values();
+            $kpiNames = $selectedNames->isNotEmpty()
+                ? $selectedNames->all()
+                : collect($issueKpis)->pluck('name')->all();
 
             return [
                 'name'   => $this->cleanValue($p->project_name, 'ไม่ระบุชื่อโครงการ'),
                 'code'   => $this->cleanValue($p->project_code, 'PJ-' . $p->id),
                 'agency' => $this->cleanValue($p->operating_agency, 'ไม่ระบุหน่วยงาน'),
-                'budget' => $budget,
-                'kpis'   => $kpis,
+                'yearly' => $yearly,
+                'total'  => $total,
+                'kpis'   => $kpiNames,
             ];
         })->values();
 

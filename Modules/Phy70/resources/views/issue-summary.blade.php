@@ -4,10 +4,15 @@
     rel="stylesheet">
 
   @php
-  // ค่าเป้าหมายรายปีของตัวชี้วัด (แบบ จ.1) — แปลงค่าให้แสดงผลตามเดิม (ตัวเลข/สตริง)
+  // แบบ จ.1 (เวอร์ชันโครงการ) — คอลัมน์รายปีแสดง "งบประมาณรายปี" ต่อโครงการ
   $fy = $fiscalYears ?? ['2571', '2572', '2573', '2574', '2575'];
-  $val = fn ($v) => (is_string($v) ? trim($v) : $v) === '' || $v === null ? '—' : $v;
-  $totalBudget = collect($projects)->sum('budget');
+  $totalBudget = collect($projects)->sum('total');
+  // ผลรวมงบรายปีทุกโครงการ (แถวสรุปท้ายตาราง)
+  $yearTotals = [];
+  foreach ($fy as $y) {
+    $yearTotals[$y] = collect($projects)->sum(fn ($p) => (float) ($p['yearly'][$y] ?? 0));
+  }
+  $money = fn ($v) => (float) $v > 0 ? number_format($v) : '—';
   @endphp
 
   <style>
@@ -297,73 +302,57 @@
           <thead>
             <tr>
               <th class="col-proj" rowspan="2">โครงการ</th>
-              <th class="col-kpi" rowspan="2">ตัวชี้วัด</th>
-              <th rowspan="2">หน่วย</th>
-              <th rowspan="2">ค่าฐาน<br>(ปีฐาน)</th>
-              <th colspan="{{ count($fy) }}">ค่าเป้าหมาย</th>
+              <th class="col-kpi" rowspan="2">ตัวชี้วัดที่ตอบสนอง</th>
+              <th colspan="{{ count($fy) + 1 }}">งบประมาณ (บาท)</th>
             </tr>
             <tr>
               @foreach($fy as $y)
               <th class="yr">พ.ศ. {{ $y }}</th>
               @endforeach
+              <th class="yr">รวม</th>
             </tr>
           </thead>
           <tbody>
             @forelse($projects as $p)
-              @php $kpis = collect($p['kpis'] ?? []); @endphp
-              @if($kpis->isEmpty())
+              @php $kpis = collect($p['kpis'] ?? [])->filter(fn ($n) => filled($n))->values(); @endphp
               <tr>
                 <td class="col-proj">
                   <div class="jsum-proj-name">{{ $p['name'] }}</div>
                   <div class="jsum-proj-meta">
                     <div>รหัส: {{ $p['code'] }}</div>
                     <div>หน่วยงาน: {{ $p['agency'] }}</div>
-                    <div>งบประมาณ: <b>{{ number_format($p['budget']) }}</b> บาท</div>
                   </div>
                 </td>
-                <td class="jsum-empty" colspan="{{ 3 + count($fy) }}">ไม่มีตัวชี้วัดที่ระบุ</td>
-              </tr>
-              @else
-                @foreach($kpis as $ki => $kpi)
-                <tr>
-                  @if($ki === 0)
-                  <td class="col-proj" rowspan="{{ $kpis->count() }}">
-                    <div class="jsum-proj-name">{{ $p['name'] }}</div>
-                    <div class="jsum-proj-meta">
-                      <div>รหัส: {{ $p['code'] }}</div>
-                      <div>หน่วยงาน: {{ $p['agency'] }}</div>
-                      <div>งบประมาณ: <b>{{ number_format($p['budget']) }}</b> บาท</div>
-                    </div>
-                  </td>
+                <td class="col-kpi">
+                  @if($kpis->isNotEmpty())
+                  <ul style="margin:0; padding-left:18px;">
+                    @foreach($kpis as $n)
+                    <li>{{ $n }}</li>
+                    @endforeach
+                  </ul>
+                  @else
+                  <span class="jsum-empty">—</span>
                   @endif
-                  <td class="col-kpi">{{ $val($kpi['name'] ?? null) }}</td>
-                  <td class="unit">{{ $val($kpi['target_unit'] ?? null) }}</td>
-                  <td class="jsum-base">
-                    @php $bv = $kpi['base_value'] ?? null; $by = $kpi['base_year'] ?? null; @endphp
-                    @if(filled($bv))
-                      {{ $bv }}@if(filled($by))<br><span style="color:#8a8a8a;">(ปี {{ $by }})</span>@endif
-                    @else
-                      —
-                    @endif
-                  </td>
-                  @php $targets = array_values($kpi['targets'] ?? []); @endphp
-                  @foreach($fy as $yi => $y)
-                  <td class="yr">{{ array_key_exists($yi, $targets) && $targets[$yi] !== null && $targets[$yi] !== '' ? $targets[$yi] : '—' }}</td>
-                  @endforeach
-                </tr>
+                </td>
+                @foreach($fy as $y)
+                <td class="yr">{{ $money($p['yearly'][$y] ?? 0) }}</td>
                 @endforeach
-              @endif
+                <td class="yr"><b>{{ number_format($p['total']) }}</b></td>
+              </tr>
             @empty
             <tr>
-              <td class="jsum-empty" colspan="{{ 4 + count($fy) }}">ยังไม่มีโครงการในประเด็นการพัฒนานี้</td>
+              <td class="jsum-empty" colspan="{{ 3 + count($fy) }}">ยังไม่มีโครงการในประเด็นการพัฒนานี้</td>
             </tr>
             @endforelse
           </tbody>
           @if($projects->isNotEmpty())
           <tfoot>
             <tr class="jsum-foot">
-              <td colspan="{{ 3 + count($fy) }}" style="text-align:right;">รวมงบประมาณทุกโครงการในประเด็นนี้</td>
-              <td class="yr" colspan="1" style="text-align:right; white-space:nowrap;">{{ number_format($totalBudget) }} บาท</td>
+              <td colspan="2" style="text-align:right;">รวมงบประมาณทุกโครงการในประเด็นนี้</td>
+              @foreach($fy as $y)
+              <td class="yr">{{ $money($yearTotals[$y] ?? 0) }}</td>
+              @endforeach
+              <td class="yr">{{ number_format($totalBudget) }}</td>
             </tr>
           </tfoot>
           @endif
@@ -371,8 +360,9 @@
       </div>
 
       <div class="jsum-meta">
-        จำนวน {{ number_format($projects->count()) }} โครงการ ·
-        ค่าเป้าหมายตัวชี้วัดเป็นค่าระดับประเด็นการพัฒนา (พ.ศ. {{ $fy[0] ?? '' }}–{{ $fy[count($fy)-1] ?? '' }})
+        จำนวน {{ number_format($projects->count()) }} โครงการ · งบประมาณรวม {{ number_format($totalBudget) }} บาท ·
+        คอลัมน์รายปี (พ.ศ. {{ $fy[0] ?? '' }}–{{ $fy[count($fy)-1] ?? '' }}) แสดงเฉพาะโครงการที่กรอกแบ่งงบรายปีไว้ ·
+        คอลัมน์ “รวม” = งบรวมทั้งโครงการ
       </div>
     </div>
   </div>
