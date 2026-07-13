@@ -729,92 +729,6 @@
       }
     }
 
-    /* Budget proportion by guideline (สัดส่วนงบประมาณตามแนวทางการพัฒนา) */
-    .guideline-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      gap: 28px;
-      align-items: center;
-      margin-top: 18px;
-    }
-
-    @media (max-width: 820px) {
-      .guideline-layout {
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-    }
-
-    .guideline-list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .gl-row {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      transition: opacity 0.3s ease;
-    }
-
-    .gl-row.is-zero {
-      opacity: 0.35;
-    }
-
-    .gl-top {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .gl-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .gl-name {
-      flex: 1;
-      min-width: 0;
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .gl-pct {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--text-main);
-      flex-shrink: 0;
-    }
-
-    .gl-bar {
-      height: 8px;
-      border-radius: 99px;
-      background: #eef1f7;
-      overflow: hidden;
-    }
-
-    .gl-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.6s ease;
-    }
-
-    .gl-budget {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .gl-budget b {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-      font-weight: 600;
-    }
-
     .section-title {
       font-size: 17px;
       font-weight: 600;
@@ -1450,6 +1364,67 @@
       overflow-y: auto;
     }
 
+    /* แนวทางการพัฒนา group (จัดกลุ่มโครงการตามแนวทาง ก่อนไปรายโครงการ) */
+    .mp-group {
+      margin-bottom: 22px;
+    }
+
+    .mp-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .mp-group-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--text-faint);
+    }
+
+    .mp-group-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .mp-group-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    .mp-group-stat {
+      flex-shrink: 0;
+      text-align: right;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .mp-group-stat b {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .mp-group.is-zero .mp-group-head {
+      opacity: 0.45;
+    }
+
     .mp-card {
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -1892,31 +1867,6 @@
   </div>
   </div>
 
-  <!-- Budget proportion by development guideline (สัดส่วนงบประมาณตามแนวทางการพัฒนา) -->
-  <div class="glass-card section-block">
-    <h3 class="section-title" style="color: var(--primary);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-      สัดส่วนงบประมาณตามแนวทางการพัฒนา
-    </h3>
-    <p class="section-sub">สัดส่วนการจัดสรรงบประมาณของแต่ละแนวทางการพัฒนา —
-      ปรับตาม<b id="guideScopeLabel">ภาพรวมทุกปี</b> ที่เลือกจากปุ่มปีด้านบน</p>
-    @if($details->pluck('guideline')->filter()->isEmpty())
-    <div class="empty-state compact">
-      <div class="empty-title">ยังไม่มีข้อมูลแนวทางการพัฒนา</div>
-      <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุแนวทางการพัฒนาและงบประมาณ</div>
-    </div>
-    @else
-    <div class="guideline-layout">
-      <div class="chart-canvas-wrap" style="height: 320px;"><canvas id="chartGuideline"></canvas></div>
-      <div id="guidelineList" class="guideline-list"></div>
-    </div>
-    @endif
-  </div>
-
   <!-- Layer mapping (ข้อมูลพื้นที่) -->
   <div class="glass-card section-block">
     <h3 class="section-title" style="color: var(--warning);">
@@ -2349,52 +2299,6 @@
             });
         }
 
-        // Budget proportion by development guideline (doughnut) — reacts to selected year
-        let chartGuideline = null;
-        if (document.getElementById('chartGuideline')) {
-            chartGuideline = new Chart(document.getElementById('chartGuideline'), {
-                type: 'doughnut',
-                data: {
-                    labels: ov.guideline.labels,
-                    datasets: [{ data: ov.guideline.values, backgroundColor: ov.guideline.colors, borderColor: surfaceBorder, borderWidth: 3 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '58%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: {
-                            label: (ctx) => {
-                                const tot = ctx.dataset.data.reduce((s, v) => s + v, 0) || 1;
-                                return ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท (' + Math.round(ctx.raw / tot * 100) + '%)';
-                            }
-                        } }
-                    }
-                }
-            });
-        }
-
-        // Guideline proportion list (bars beside the doughnut)
-        const guidelineListEl = document.getElementById('guidelineList');
-        function renderGuidelineList(items) {
-            if (!guidelineListEl) return;
-            if (!items || !items.length) {
-                guidelineListEl.innerHTML = '<div class="empty-state compact"><div class="empty-title">ไม่มีงบประมาณของแนวทางการพัฒนาในช่วงที่เลือก</div></div>';
-                return;
-            }
-            guidelineListEl.innerHTML = items.map(g =>
-                '<div class="gl-row' + (g.budget <= 0 ? ' is-zero' : '') + '">' +
-                '<div class="gl-top">' +
-                '<span class="gl-dot" style="background:' + g.color + ';"></span>' +
-                '<span class="gl-name" title="' + esc(g.name) + '">' + esc(g.name) + '</span>' +
-                '<span class="gl-pct" style="color:' + g.color + ';">' + g.pct + '%</span>' +
-                '</div>' +
-                '<div class="gl-bar"><div class="gl-bar-fill" style="width:' + g.pct + '%;background:' + g.color + ';"></div></div>' +
-                '<div class="gl-budget"><b>' + bahtFmt(g.budget) + '</b> บาท</div>' +
-                '</div>'
-            ).join('');
-        }
-        if (chartGuideline) renderGuidelineList(ov.guideline.items);
-
         // Budget by fiscal year (stacked by issue) — overview only, static
         if (document.getElementById('chartYearly')) {
             new Chart(document.getElementById('chartYearly'), {
@@ -2520,9 +2424,6 @@
             updateChart(chartIssue, s.issues.map(i => i.name), s.issues.map(i => i.budget), s.issues.map(i => i.color));
             updateChart(chartAgency, s.agency.labels, s.agency.values);
             updateChart(chartGroup, s.group.labels, s.group.values);
-            updateChart(chartGuideline, s.guideline.labels, s.guideline.values, s.guideline.colors);
-            renderGuidelineList(s.guideline.items);
-            setText('guideScopeLabel', isOverview ? 'ภาพรวมทุกปี' : ('ปี ' + key));
 
             // Map
             buildMapLayers(s.areaMap);
@@ -2578,8 +2479,13 @@
                 '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (SVG_ICONS[meta.icon] || SVG_ICONS.flag) + '</svg>';
             document.getElementById('issueModalTitle').textContent = name;
             const scopeLabel = currentScope === 'overview' ? 'ทุกปีงบประมาณ' : ('ปีงบประมาณ ' + currentScope);
+            // นับจำนวนแนวทางการพัฒนาที่มีงบในสโคปนี้ (เพื่อโชว์ในหัว modal)
+            const guidelineCount = new Set(
+                rows.filter(r => r.b > 0)
+                    .map(r => (r.p.guideline && String(r.p.guideline).trim()) ? String(r.p.guideline).trim() : 'ไม่ระบุแนวทาง')
+            ).size;
             document.getElementById('issueModalSub').innerHTML =
-                '<b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
+                '<b>' + bahtFmt(guidelineCount) + '</b> แนวทาง · <b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
 
             // ปุ่ม "ดูรายละเอียด (แบบ จ.1)" → หน้าสรุปโครงการรายประเด็น
             const summaryLink = document.getElementById('issueModalSummary');
@@ -2589,41 +2495,66 @@
                 summaryLink.style.borderColor = meta.color;
             }
 
-            // Body — การ์ดต่อโครงการ + รายการกิจกรรม
+            // การ์ดรายโครงการ (พร้อมรายการกิจกรรม) — ใช้ซ้ำในแต่ละกลุ่มแนวทาง
+            const projectCardHtml = ({ p, b }) => {
+                const acts = (p.acts || []).map(a => {
+                    const ab = dBud[a.dindex] != null ? dBud[a.dindex] : a.budget;
+                    return '<div class="mp-act' + (ab <= 0 ? ' is-zero' : '') + '">' +
+                        '<span class="mp-act-dot" style="background:' + meta.color + ';"></span>' +
+                        '<span class="mp-act-name">' + esc(a.activity || a.guideline || 'กิจกรรม') + '</span>' +
+                        '<span class="mp-act-area">' + esc(a.target_area || '') + '</span>' +
+                        '<span class="mp-act-budget">' + bahtFmt(ab) + ' ฿</span></div>';
+                }).join('');
+                const href = p.db_id != null ? BRIEF_URL.replace('__ID__', encodeURIComponent(p.db_id)) : null;
+                const hint = href
+                    ? '<div class="mp-brief-hint" style="color:' + meta.color + ';">ดูรายละเอียดโครงการ (แบบ จ.1-1)' +
+                      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>'
+                    : '';
+                const open = href ? '<a class="mp-card' + (b <= 0 ? ' is-zero' : '') + '" href="' + href + '">' : '<div class="mp-card' + (b <= 0 ? ' is-zero' : '') + '">';
+                const close = href ? '</a>' : '</div>';
+                return open +
+                    '<div class="mp-top">' +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<div class="mp-name">' + esc(p.name) + '</div>' +
+                    '<div class="mp-meta">' +
+                    '<span>รหัส: ' + esc(p.id) + '</span>' +
+                    '<span>หน่วยงาน: ' + esc(p.agency || '—') + '</span>' +
+                    '</div></div>' +
+                    '<div class="mp-budget"><div class="mp-budget-val" style="color:' + meta.color + ';">' + bahtFmt(b) + '</div>' +
+                    '<div class="mp-budget-lbl">บาท</div></div></div>' +
+                    (acts ? '<div class="mp-acts">' + acts + '</div>' : '') +
+                    hint +
+                    close;
+            };
+
+            // Body — จัดกลุ่มโครงการตาม "แนวทางการพัฒนา" ก่อน แล้วค่อยแสดงรายโครงการในกลุ่ม
             const body = document.getElementById('issueModalBody');
             if (!rows.length) {
                 body.innerHTML = '<div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลโครงการในประเด็นนี้</div></div>';
             } else {
-                body.innerHTML = rows.map(({ p, b }) => {
-                    const acts = (p.acts || []).map(a => {
-                        const ab = dBud[a.dindex] != null ? dBud[a.dindex] : a.budget;
-                        return '<div class="mp-act' + (ab <= 0 ? ' is-zero' : '') + '">' +
-                            '<span class="mp-act-dot" style="background:' + meta.color + ';"></span>' +
-                            '<span class="mp-act-name">' + esc(a.activity || a.guideline || 'กิจกรรม') + '</span>' +
-                            '<span class="mp-act-area">' + esc(a.target_area || '') + '</span>' +
-                            '<span class="mp-act-budget">' + bahtFmt(ab) + ' ฿</span></div>';
-                    }).join('');
-                    const href = p.db_id != null ? BRIEF_URL.replace('__ID__', encodeURIComponent(p.db_id)) : null;
-                    const hint = href
-                        ? '<div class="mp-brief-hint" style="color:' + meta.color + ';">ดูรายละเอียดโครงการ (แบบ จ.1-1)' +
-                          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>'
-                        : '';
-                    const open = href ? '<a class="mp-card' + (b <= 0 ? ' is-zero' : '') + '" href="' + href + '">' : '<div class="mp-card' + (b <= 0 ? ' is-zero' : '') + '">';
-                    const close = href ? '</a>' : '</div>';
-                    return open +
-                        '<div class="mp-top">' +
-                        '<div style="flex:1;min-width:0;">' +
-                        '<div class="mp-name">' + esc(p.name) + '</div>' +
-                        '<div class="mp-meta">' +
-                        '<span>รหัส: ' + esc(p.id) + '</span>' +
-                        '<span>หน่วยงาน: ' + esc(p.agency || '—') + '</span>' +
-                        (p.guideline ? '<span>แนวทาง: ' + esc(p.guideline) + '</span>' : '') +
-                        '</div></div>' +
-                        '<div class="mp-budget"><div class="mp-budget-val" style="color:' + meta.color + ';">' + bahtFmt(b) + '</div>' +
-                        '<div class="mp-budget-lbl">บาท</div></div></div>' +
-                        (acts ? '<div class="mp-acts">' + acts + '</div>' : '') +
-                        hint +
-                        close;
+                // รวมโครงการเข้ากลุ่มตามแนวทาง (คงลำดับงบมาก→น้อยจากภายในแต่ละกลุ่ม)
+                const groupMap = new Map();
+                rows.forEach(r => {
+                    const key = (r.p.guideline && String(r.p.guideline).trim()) ? String(r.p.guideline).trim() : 'ไม่ระบุแนวทาง';
+                    if (!groupMap.has(key)) groupMap.set(key, { name: key, rows: [], budget: 0, active: 0 });
+                    const g = groupMap.get(key);
+                    g.rows.push(r);
+                    g.budget += r.b;
+                    if (r.b > 0) g.active++;
+                });
+                // เรียงกลุ่มตามงบรวมมาก→น้อย
+                const groups = [...groupMap.values()].sort((a, b) => b.budget - a.budget);
+                const groupPalette = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#3b82f6'];
+
+                body.innerHTML = groups.map((g, gi) => {
+                    const col = groupPalette[gi % groupPalette.length];
+                    const head = '<div class="mp-group-head" style="border-left-color:' + col + ';">' +
+                        '<span class="mp-group-badge" style="background:' + col + ';">แนวทางที่ ' + (gi + 1) + '</span>' +
+                        '<span class="mp-group-name">' + esc(g.name) + '</span>' +
+                        '<span class="mp-group-stat"><b>' + bahtFmt(g.active) + '</b> โครงการ · <b>' + bahtFmt(g.budget) + '</b> บาท</span>' +
+                        '</div>';
+                    const cards = g.rows.map(projectCardHtml).join('');
+                    return '<div class="mp-group' + (g.budget <= 0 ? ' is-zero' : '') + '">' + head + cards + '</div>';
                 }).join('');
             }
 
