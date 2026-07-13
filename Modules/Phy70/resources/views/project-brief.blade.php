@@ -31,6 +31,22 @@
     ->filter()->map(fn ($x) => trim($x))->unique()->values();
 
   $val = fn ($v) => filled($v) ? $v : '—';
+
+  // ---- ระยะเวลาดำเนินโครงการ (ปีงบประมาณ) ----------------------------
+  // operating_year = ปีสิ้นสุด (ตามฟอร์ม โครงการเริ่มปีแรกของแผนแล้วนับสะสมถึงปีนี้)
+  // ถ้าครอบคลุมมากกว่า 1 ปี → แจ้งเป็นช่วง "ตั้งแต่ปี ... ถึง ..." พร้อมระบุว่า "ทุกปี"
+  $fyList = $fiscalYears ?? ['2571', '2572', '2573', '2574', '2575'];
+  $endYear = trim((string) ($proposal->operating_year ?? ''));
+  $coveredYears = $endYear !== ''
+    ? array_values(array_filter($fyList, fn ($y) => (string) $y <= $endYear))
+    : [];
+  if (count($coveredYears) <= 1) {
+    $durationText = $endYear !== '' ? 'ปีงบประมาณ พ.ศ. ' . $endYear : '—';
+  } else {
+    $durationText = 'ทุกปีงบประมาณ ตั้งแต่ พ.ศ. ' . $coveredYears[0]
+      . ' ถึง พ.ศ. ' . end($coveredYears)
+      . ' (รวม ' . count($coveredYears) . ' ปี)';
+  }
   @endphp
 
   <style>
@@ -410,7 +426,7 @@
           </tr>
           <tr>
             <td class="col-topic"><span class="num">8.</span> ระยะเวลาในการดำเนินโครงการ</td>
-            <td class="brief-detail">{{ $proposal->operating_year ? 'ปีงบประมาณ พ.ศ. ' . $proposal->operating_year : '—' }}</td>
+            <td class="brief-detail">{{ $durationText }}</td>
           </tr>
           <tr>
             <td class="col-topic"><span class="num">9.</span> งบประมาณ</td>

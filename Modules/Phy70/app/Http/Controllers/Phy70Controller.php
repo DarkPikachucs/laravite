@@ -448,8 +448,9 @@ class Phy70Controller extends Controller
     public function projectBrief($id)
     {
         $proposal = Phy70Proposal::findOrFail($id);
+        $fiscalYears = self::FISCAL_YEARS;
 
-        return view('phy70::project-brief', compact('proposal'));
+        return view('phy70::project-brief', compact('proposal', 'fiscalYears'));
     }
 
     /**
