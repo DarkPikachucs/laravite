@@ -142,6 +142,7 @@
   $areaBudget = [];
   $areaActs = [];
   $groupBudget = [];
+  $guidelineBudget = [];
   $tambon = [];
   $di = 0;
   foreach ($projects as $pi => $p) {
@@ -156,6 +157,8 @@
   $areaBudget[$t] = ($areaBudget[$t] ?? 0) + $b;
   if ($b > 0) $areaActs[$t] = ($areaActs[$t] ?? 0) + 1;
   $groupBudget[$d['target_group']] = ($groupBudget[$d['target_group']] ?? 0) + $b;
+  $gname = filled($d['guideline']) ? $d['guideline'] : 'ไม่ระบุแนวทาง';
+  $guidelineBudget[$gname] = ($guidelineBudget[$gname] ?? 0) + $b;
   if (!isset($tambon[$t])) $tambon[$t] = ['budget' => 0, 'acts' => 0, 'issues' => [], 'guides' => []];
   $tambon[$t]['budget'] += $b;
   if ($b > 0) $tambon[$t]['acts'] += 1;
@@ -171,6 +174,7 @@
   arsort($agencyBudget);
   arsort($areaBudget);
   arsort($groupBudget);
+  arsort($guidelineBudget);
 
   $maxIssue = max(1, ...(count($issueBudget) ? array_values($issueBudget) : [1]));
   $maxArea = max(1, ...(count($areaBudget) ? array_values($areaBudget) : [1]));
@@ -227,6 +231,15 @@
   $totalBudget = array_sum($detailBudget);
   $activeProjects = count(array_filter($projBudget, fn($b) => $b > 0));
 
+  // สัดส่วนงบประมาณตามแนวทางการพัฒนา (share ของงบรวมในสโคปนี้)
+  $guideTotal = array_sum($guidelineBudget) ?: 1;
+  $guidelineItems = [];
+  foreach ($guidelineBudget as $gName => $gBud) {
+  if ($gBud <= 0) continue;
+  $guidelineItems[] = ['name' => $gName, 'budget' => $gBud, 'pct' => round($gBud / $guideTotal * 100),
+  'color' => ($guidelineColors[$gName] ?? '#64748b')];
+  }
+
   return [
   'kpi' => [
   'projects' => $activeProjects,
@@ -240,6 +253,12 @@
   'issues' => $issues,
   'agency' => ['labels' => array_keys($agencyBudget), 'values' => array_values($agencyBudget)],
   'group' => ['labels' => array_keys($groupBudget), 'values' => array_values($groupBudget)],
+  'guideline' => [
+  'labels' => array_column($guidelineItems, 'name'),
+  'values' => array_column($guidelineItems, 'budget'),
+  'colors' => array_column($guidelineItems, 'color'),
+  'items' => $guidelineItems,
+  ],
   'areaList' => $areaList,
   'areaMap' => $areaMap,
   'top' => $top,
@@ -708,6 +727,92 @@
       .charts-grid {
         grid-template-columns: 1fr;
       }
+    }
+
+    /* Budget proportion by guideline (สัดส่วนงบประมาณตามแนวทางการพัฒนา) */
+    .guideline-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 28px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 820px) {
+      .guideline-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+    }
+
+    .guideline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .gl-row {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      transition: opacity 0.3s ease;
+    }
+
+    .gl-row.is-zero {
+      opacity: 0.35;
+    }
+
+    .gl-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .gl-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .gl-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .gl-pct {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-main);
+      flex-shrink: 0;
+    }
+
+    .gl-bar {
+      height: 8px;
+      border-radius: 99px;
+      background: #eef1f7;
+      overflow: hidden;
+    }
+
+    .gl-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+
+    .gl-budget {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .gl-budget b {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      font-weight: 600;
     }
 
     .section-title {
@@ -1787,6 +1892,31 @@
   </div>
   </div>
 
+  <!-- Budget proportion by development guideline (สัดส่วนงบประมาณตามแนวทางการพัฒนา) -->
+  <div class="glass-card section-block">
+    <h3 class="section-title" style="color: var(--primary);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      </svg>
+      สัดส่วนงบประมาณตามแนวทางการพัฒนา
+    </h3>
+    <p class="section-sub">สัดส่วนการจัดสรรงบประมาณของแต่ละแนวทางการพัฒนา —
+      ปรับตาม<b id="guideScopeLabel">ภาพรวมทุกปี</b> ที่เลือกจากปุ่มปีด้านบน</p>
+    @if($details->pluck('guideline')->filter()->isEmpty())
+    <div class="empty-state compact">
+      <div class="empty-title">ยังไม่มีข้อมูลแนวทางการพัฒนา</div>
+      <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุแนวทางการพัฒนาและงบประมาณ</div>
+    </div>
+    @else
+    <div class="guideline-layout">
+      <div class="chart-canvas-wrap" style="height: 320px;"><canvas id="chartGuideline"></canvas></div>
+      <div id="guidelineList" class="guideline-list"></div>
+    </div>
+    @endif
+  </div>
+
   <!-- Layer mapping (ข้อมูลพื้นที่) -->
   <div class="glass-card section-block">
     <h3 class="section-title" style="color: var(--warning);">
@@ -2219,6 +2349,52 @@
             });
         }
 
+        // Budget proportion by development guideline (doughnut) — reacts to selected year
+        let chartGuideline = null;
+        if (document.getElementById('chartGuideline')) {
+            chartGuideline = new Chart(document.getElementById('chartGuideline'), {
+                type: 'doughnut',
+                data: {
+                    labels: ov.guideline.labels,
+                    datasets: [{ data: ov.guideline.values, backgroundColor: ov.guideline.colors, borderColor: surfaceBorder, borderWidth: 3 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '58%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: {
+                            label: (ctx) => {
+                                const tot = ctx.dataset.data.reduce((s, v) => s + v, 0) || 1;
+                                return ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท (' + Math.round(ctx.raw / tot * 100) + '%)';
+                            }
+                        } }
+                    }
+                }
+            });
+        }
+
+        // Guideline proportion list (bars beside the doughnut)
+        const guidelineListEl = document.getElementById('guidelineList');
+        function renderGuidelineList(items) {
+            if (!guidelineListEl) return;
+            if (!items || !items.length) {
+                guidelineListEl.innerHTML = '<div class="empty-state compact"><div class="empty-title">ไม่มีงบประมาณของแนวทางการพัฒนาในช่วงที่เลือก</div></div>';
+                return;
+            }
+            guidelineListEl.innerHTML = items.map(g =>
+                '<div class="gl-row' + (g.budget <= 0 ? ' is-zero' : '') + '">' +
+                '<div class="gl-top">' +
+                '<span class="gl-dot" style="background:' + g.color + ';"></span>' +
+                '<span class="gl-name" title="' + esc(g.name) + '">' + esc(g.name) + '</span>' +
+                '<span class="gl-pct" style="color:' + g.color + ';">' + g.pct + '%</span>' +
+                '</div>' +
+                '<div class="gl-bar"><div class="gl-bar-fill" style="width:' + g.pct + '%;background:' + g.color + ';"></div></div>' +
+                '<div class="gl-budget"><b>' + bahtFmt(g.budget) + '</b> บาท</div>' +
+                '</div>'
+            ).join('');
+        }
+        if (chartGuideline) renderGuidelineList(ov.guideline.items);
+
         // Budget by fiscal year (stacked by issue) — overview only, static
         if (document.getElementById('chartYearly')) {
             new Chart(document.getElementById('chartYearly'), {
@@ -2344,6 +2520,9 @@
             updateChart(chartIssue, s.issues.map(i => i.name), s.issues.map(i => i.budget), s.issues.map(i => i.color));
             updateChart(chartAgency, s.agency.labels, s.agency.values);
             updateChart(chartGroup, s.group.labels, s.group.values);
+            updateChart(chartGuideline, s.guideline.labels, s.guideline.values, s.guideline.colors);
+            renderGuidelineList(s.guideline.items);
+            setText('guideScopeLabel', isOverview ? 'ภาพรวมทุกปี' : ('ปี ' + key));
 
             // Map
             buildMapLayers(s.areaMap);
