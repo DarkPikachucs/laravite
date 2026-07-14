@@ -68,7 +68,7 @@ class Phy70Controller extends Controller
             'operating_year' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
-            'plan' => 'nullable|string',
+            'plan' => $req . '|string',
             // Section 3
             'target_province' => 'nullable|string|max:255',
             'target_district' => 'nullable|array',
@@ -103,6 +103,7 @@ class Phy70Controller extends Controller
             'activities.*.guideline' => $req . '|string|max:255',
         ], [
             'province_issue.required' => 'กรุณาเลือกประเด็นการพัฒนาของจังหวัด',
+            'plan.required' => 'กรุณาเลือกแผนงานย่อยของประเด็น',
             'project_name.required' => 'กรุณากรอกชื่อโครงการ',
             'operating_agency.required' => 'กรุณากรอกหน่วยดำเนินการ',
             'responsible_person.required' => 'กรุณากรอกผู้รับผิดชอบ',
@@ -272,7 +273,7 @@ class Phy70Controller extends Controller
             'operating_year' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
-            'plan' => 'nullable|string',
+            'plan' => $req . '|string',
             // Section 3
             'target_province' => 'nullable|string|max:255',
             'target_district' => 'nullable|array',
