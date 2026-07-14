@@ -198,1979 +198,1949 @@
   arsort($agg['guides']);
   $issueBreak = [];
   foreach ($agg['issues'] as $is => $b) {
-  if ($b <= 0) continue;
-  $issueBreak[] = ['name' => $is, 'budget' => $b, 'color' => ($issueMeta[$is]['color'] ?? $issueDefault['color'])];
-  }
-  $guideBreak = [];
-  foreach ($agg['guides'] as $g => $b) {
-  if ($b <= 0) continue;
-  $guideBreak[] = ['name' => $g, 'budget' => $b, 'color' => ($guidelineColors[$g] ?? '#64748b')];
-  }
-  $pct = round($bud / $maxArea * 100);
-  $areaList[] = ['name' => $area, 'budget' => $bud, 'acts' => $areaActs[$area] ?? 0, 'pct' => $pct,
-  'color' => $color, 'rank' => $ai + 1];
-  $areaMap[] = [
-  'name' => $area, 'budget' => $bud, 'acts' => $areaActs[$area] ?? 0, 'color' => $color,
-  'lat' => $areaCoords[$area][0] ?? 16.42, 'lng' => $areaCoords[$area][1] ?? 101.15, 'pct' => $pct,
-  'issues' => $issueBreak, 'guides' => $guideBreak,
-  'domIssue' => $issueBreak[0] ?? ['name' => '—', 'budget' => 0, 'color' => '#64748b'],
-  'domGuide' => $guideBreak[0] ?? ['name' => '—', 'budget' => 0, 'color' => '#64748b'],
-  ];
-  $ai++;
-  }
-
-  // top 5 โครงการตามงบในสโคปนี้
-  $topIdx = collect($projBudget)->sortDesc()->take(5)->keys();
-  $top = [];
-  foreach ($topIdx as $pi) {
-  if (($projBudget[$pi] ?? 0) <= 0) continue;
-  $top[] = ['name' => $projects[$pi]['project_name'], 'agency' => $projects[$pi]['operating_agency'],
-  'budget' => $projBudget[$pi]];
-  }
-
-  $totalBudget = array_sum($detailBudget);
-  $activeProjects = count(array_filter($projBudget, fn($b) => $b > 0));
-
-  // สัดส่วนงบประมาณตามแนวทางการพัฒนา (share ของงบรวมในสโคปนี้)
-  $guideTotal = array_sum($guidelineBudget) ?: 1;
-  $guidelineItems = [];
-  foreach ($guidelineBudget as $gName => $gBud) {
-  if ($gBud <= 0) continue;
-  $guidelineItems[] = ['name' => $gName, 'budget' => $gBud, 'pct' => round($gBud / $guideTotal * 100),
-  'color' => ($guidelineColors[$gName] ?? '#64748b')];
-  }
-
-  return [
-  'kpi' => [
-  'projects' => $activeProjects,
-  'activities' => count(array_filter($detailBudget, fn($b) => $b > 0)),
-  'total_budget' => $totalBudget,
-  'agencies' => collect($projects)->filter(fn($p, $pi) => ($projBudget[$pi] ?? 0) > 0)
-  ->pluck('operating_agency')->unique()->count(),
-  'target_areas' => count(array_filter($areaBudget, fn($b) => $b > 0)),
-  'avg_budget' => $activeProjects ? round($totalBudget / $activeProjects) : 0,
-  ],
-  'issues' => $issues,
-  'agency' => ['labels' => array_keys($agencyBudget), 'values' => array_values($agencyBudget)],
-  'group' => ['labels' => array_keys($groupBudget), 'values' => array_values($groupBudget)],
-  'guideline' => [
-  'labels' => array_column($guidelineItems, 'name'),
-  'values' => array_column($guidelineItems, 'budget'),
-  'colors' => array_column($guidelineItems, 'color'),
-  'items' => $guidelineItems,
-  ],
-  'areaList' => $areaList,
-  'areaMap' => $areaMap,
-  'top' => $top,
-  'projBudget' => array_map(fn($pi) => $projBudget[$pi] ?? 0, array_keys($projBudget)),
-  'detailBudget' => $detailBudget,
-  ];
-  };
-
-  // ภาพรวม = งบรวมของกิจกรรม / รายปี = งบเฉพาะปีนั้นใน yearly_budgets
-  $scopes = ['overview' => $buildScope(fn($d) => $d['budget'])];
-  foreach ($years as $y) {
-  $scopes[$y] = $buildScope(fn($d) => $d['yearly_budgets'][$y] ?? 0);
-  }
-
-  // Stacked bar — งบประมาณรายปี (แกน X = ปี, ซ้อนสีตามประเด็น) สำหรับโหมดภาพรวม
-  $stackIssues = collect($scopes['overview']['issues'])->pluck('name');
-  $stackedSeries = [];
-  foreach ($stackIssues as $isName) {
-  $m = $issueMeta[$isName] ?? $issueDefault;
-  $data = [];
-  foreach ($years as $y) {
-  $row = collect($scopes[$y]['issues'])->firstWhere('name', $isName);
-  $data[] = $row ? $row['budget'] : 0;
-  }
-  $stackedSeries[] = ['name' => $isName, 'color' => $m['color'], 'data' => $data];
-  }
-  $stackedTotals = [];
-  foreach ($years as $y) { $stackedTotals[] = $scopes[$y]['kpi']['total_budget']; }
-
-  // ---- Per-issue project drilldown payload --------------------------
-  // จัดกลุ่มโครงการตาม "ประเด็น" พร้อมกิจกรรมของแต่ละโครงการ และแนบ pindex/dindex
-  // (ลำดับเดียวกับตาราง data-pindex/data-dindex) เพื่อให้ modal คำนวณงบตามปีที่เลือกได้
-  $issueProjects = [];
-  $dIdx = 0;
-  foreach ($projects as $pi => $p) {
-  $isName = $p['province_issue'];
-  $acts = [];
-  foreach ($p['details'] as $d) {
-  $acts[] = [
-  'dindex' => $dIdx,
-  'activity' => $d['activity'],
-  'guideline' => $d['guideline'],
-  'target_area' => $d['target_area'],
-  'target_group' => $d['target_group'],
-  'budget' => $d['budget'],
-  ];
-  $dIdx++;
-  }
-  $issueProjects[$isName][] = [
-  'pindex' => $pi,
-  'db_id' => $p['db_id'],
-  'id' => $p['project_id'],
-  'name' => $p['project_name'],
-  'agency' => $p['operating_agency'],
-  'guideline' => $p['province_guideline'],
-  'budget' => $p['total_budget'],
-  'acts' => $acts,
-  ];
-  }
-
-  // ---- Inline SVG path library --------------------------------------
-  $svgIcons = [
-  'activity' => '
-  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />',
-  'mountain' => '
-  <path d="m8 3 4 8 5-5 5 15H2L8 3z" />',
-  'heart' => '
-  <path
-    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-  ',
-  'child' => '
-  <circle cx="12" cy="5" r="2.4" />
-  <path d="M12 7.4v6m0 0-3 4.6m3-4.6 3 4.6M8 10.2h8" />',
-  'flag' => '
-  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-  <line x1="4" y1="22" x2="4" y2="15" />',
-  'pin' => '
-  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-  <circle cx="12" cy="10" r="3" />',
-  'layers' => '
-  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-  <polyline points="2 17 12 22 22 17" />
-  <polyline points="2 12 12 17 22 12" />',
-  ];
-  @endphp
-
-  <style>
-    :root {
-      --bg-base: #f3f5fb;
-      --bg-surface: #ffffff;
-      --border: #e6e9f2;
-      --border-hover: #c7cde0;
-      --primary: #6366f1;
-      --primary-soft: rgba(99, 102, 241, 0.10);
-      --secondary: #0891b2;
-      --success: #059669;
-      --warning: #d97706;
-      --danger: #dc2626;
-      --text-main: #1e293b;
-      --text-muted: #64748b;
-      --text-faint: #94a3b8;
-      --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
-      --shadow-hover: 0 4px 8px rgba(16, 24, 40, 0.06), 0 16px 40px rgba(16, 24, 40, 0.10);
-      --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  if ($b <= 0) continue; $issueBreak[]=['name'=> $is, 'budget' => $b, 'color' => ($issueMeta[$is]['color'] ??
+    $issueDefault['color'])];
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background-color: var(--bg-base) !important;
-      color: var(--text-main);
-      font-family: 'Outfit', 'Prompt', 'IBM Plex Sans Thai', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    .bg-glow-1,
-    .bg-glow-2 {
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .bg-glow-1 {
-      width: 620px;
-      height: 620px;
-      top: -280px;
-      left: -220px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.10) 0%, transparent 70%);
-    }
-
-    .bg-glow-2 {
-      width: 520px;
-      height: 520px;
-      bottom: -180px;
-      right: -120px;
-      background: radial-gradient(circle, rgba(8, 145, 178, 0.09) 0%, transparent 70%);
-    }
-
-    .dashboard-container {
-      max-width: 1440px;
-      margin: 0 auto;
-      padding: 40px 24px;
-      position: relative;
-      z-index: 10;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 32px;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-
-    .logo-section {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .logo-icon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.30);
-    }
-
-    .logo-title {
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--text-main);
-    }
-
-    .logo-subtitle {
-      font-size: 12px;
-      color: var(--secondary);
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-
-    .btn-secondary {
-      background: #fff;
-      border: 1px solid var(--border);
-      color: var(--text-main);
-      padding: 10px 18px;
-      border-radius: 12px;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      transition: var(--transition-smooth);
-      box-shadow: var(--shadow-card);
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--border-hover);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .mockup-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(217, 119, 6, 0.10);
-      border: 1px solid rgba(217, 119, 6, 0.25);
-      color: var(--warning);
-      padding: 5px 12px;
-      border-radius: 99px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(5, 150, 105, 0.10);
-      border: 1px solid rgba(5, 150, 105, 0.25);
-      color: var(--success);
-      padding: 5px 12px;
-      border-radius: 99px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    /* Empty state — shown wherever a section has no data yet */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      text-align: center;
-      color: var(--text-muted);
-      padding: 40px 20px;
-      width: 100%;
-    }
-
-    .empty-state.compact {
-      padding: 28px 16px;
-    }
-
-    .empty-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 14px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--primary-soft);
-      color: var(--primary);
-    }
-
-    .empty-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .empty-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      max-width: 420px;
-      line-height: 1.5;
-    }
-
-    .empty-cell {
-      text-align: center;
-      color: var(--text-muted);
-      padding: 36px 16px !important;
-      font-size: 13.5px;
-    }
-
-    .glass-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 24px;
-      transition: var(--transition-smooth);
-      box-shadow: var(--shadow-card);
-    }
-
-    .glass-card:hover {
-      border-color: var(--border-hover);
-      box-shadow: var(--shadow-hover);
-    }
-
-    .page-title {
-      font-size: 24px;
-      font-weight: 700;
-      font-family: 'Prompt', sans-serif;
-      margin-bottom: 6px;
-      color: var(--text-main);
-    }
-
-    .page-desc {
-      color: var(--text-muted);
-      font-size: 14px;
-      margin-bottom: 28px;
-    }
-
-    /* Year selector (ภาพรวม + รายปี) */
-    .year-selector {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 6px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-card);
-      width: fit-content;
-      max-width: 100%;
-    }
-
-    .year-btn {
-      appearance: none;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: 13.5px;
-      font-weight: 600;
-      padding: 9px 18px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: var(--transition-smooth);
-      white-space: nowrap;
-    }
-
-    .year-btn:hover {
-      background: var(--primary-soft);
-      color: var(--primary);
-    }
-
-    .year-btn.active {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.30);
-    }
-
-    .year-btn small {
-      font-weight: 500;
-      opacity: 0.75;
-      font-size: 11px;
-      margin-left: 5px;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .scope-note {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin: -12px 0 22px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .scope-note b {
-      color: var(--primary);
-    }
-
-    /* Dim rows/cards that have no budget in the selected year */
-    .is-zero {
-      opacity: 0.38;
-      filter: grayscale(0.4);
-    }
-
-    /* Elements shown only in overview mode (hidden when a year is picked) */
-    .overview-only.hide-scope {
-      display: none;
-    }
-
-    /* KPI cards */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 20px;
-      margin-bottom: 28px;
-    }
-
-    .kpi-card {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .kpi-head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .kpi-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .kpi-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 500;
-      line-height: 1.3;
-    }
-
-    .kpi-value {
-      font-size: 30px;
-      font-weight: 700;
-      color: var(--text-main);
-      font-family: 'Outfit', sans-serif;
-    }
-
-    .kpi-unit {
-      font-size: 13px;
-      color: var(--text-faint);
-      font-weight: 500;
-      margin-left: 4px;
-    }
-
-    /* Charts */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-      margin-bottom: 28px;
-    }
-
-    .chart-card {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chart-canvas-wrap {
-      position: relative;
-      height: 300px;
-      margin-top: 12px;
-    }
-
-    @media (max-width: 900px) {
-      .charts-grid {
-        grid-template-columns: 1fr;
+    $guideBreak = [];
+    foreach ($agg['guides'] as $g => $b) {
+    if ($b <= 0) continue; $guideBreak[]=['name'=> $g, 'budget' => $b, 'color' => ($guidelineColors[$g] ?? '#64748b')];
       }
-    }
-
-    /* Budget proportion by guideline (สัดส่วนงบประมาณตามแนวทางการพัฒนา) */
-    .guideline-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      gap: 28px;
-      align-items: center;
-      margin-top: 18px;
-    }
-
-    @media (max-width: 820px) {
-      .guideline-layout {
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-    }
-
-    .guideline-list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .gl-row {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      transition: opacity 0.3s ease;
-    }
-
-    .gl-row.is-zero {
-      opacity: 0.35;
-    }
-
-    .gl-top {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .gl-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .gl-name {
-      flex: 1;
-      min-width: 0;
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .gl-pct {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--text-main);
-      flex-shrink: 0;
-    }
-
-    .gl-bar {
-      height: 8px;
-      border-radius: 99px;
-      background: #eef1f7;
-      overflow: hidden;
-    }
-
-    .gl-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.6s ease;
-    }
-
-    .gl-budget {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .gl-budget b {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-      font-weight: 600;
-    }
-
-    .section-title {
-      font-size: 17px;
-      font-weight: 600;
-      font-family: 'Prompt', sans-serif;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--text-main);
-    }
-
-    .section-sub {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .section-block {
-      margin-bottom: 28px;
-    }
-
-    /* Issue cards (ประเด็นการพัฒนา) */
-    .issue-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 18px;
-      margin-top: 18px;
-    }
-
-    .issue-card {
-      position: relative;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px 18px 16px;
-      overflow: hidden;
-      transition: var(--transition-smooth);
-      cursor: pointer;
-    }
-
-    .issue-card:hover {
-      box-shadow: var(--shadow-hover);
-      transform: translateY(-2px);
-    }
-
-    .issue-card:focus-visible {
-      outline: 2px solid var(--primary);
-      outline-offset: 2px;
-    }
-
-    /* affordance: "คลิกเพื่อดูรายโครงการ" ที่มุมล่างขวาของการ์ด */
-    .issue-drill {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin-top: 12px;
-      font-size: 12px;
-      font-weight: 600;
-      opacity: 0.85;
-    }
-
-    .issue-drill svg {
-      transition: transform 0.25s ease;
-    }
-
-    .issue-card:hover .issue-drill svg {
-      transform: translateX(3px);
-    }
-
-    .issue-accent {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-    }
-
-    .issue-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .issue-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .issue-name {
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 1.4;
-      color: var(--text-main);
-    }
-
-    .issue-count {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .issue-budget {
-      font-size: 22px;
-      font-weight: 700;
-      font-family: 'Outfit', sans-serif;
-    }
-
-    .issue-budget small {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-faint);
-      margin-left: 4px;
-    }
-
-    .issue-bar {
-      height: 7px;
-      border-radius: 99px;
-      background: #eef1f7;
-      overflow: hidden;
-      margin-top: 12px;
-    }
-
-    .issue-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.6s ease;
-    }
-
-    /* Real map (ข้อมูลพื้นที่) */
-    .area-map-wrap {
-      position: relative;
-      margin-top: 18px;
-      height: 480px;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-    }
-
-    #areaMap {
-      width: 100%;
-      height: 100%;
-      background: #eaeef5;
-    }
-
-    .leaflet-popup-content-wrapper {
-      border-radius: 12px;
-      box-shadow: var(--shadow-hover);
-    }
-
-    .leaflet-popup-content {
-      margin: 12px 14px;
-      font-family: 'Outfit', 'IBM Plex Sans Thai', sans-serif;
-    }
-
-    .map-pop-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: #1e293b;
-      margin-bottom: 6px;
-    }
-
-    .map-pop-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      font-size: 12.5px;
-      color: #475569;
-      padding: 2px 0;
-    }
-
-    .map-pop-row b {
-      font-family: 'JetBrains Mono', monospace;
-      color: #1e293b;
-    }
-
-    .map-legend {
-      position: absolute;
-      z-index: 500;
-      bottom: 14px;
-      right: 14px;
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 12px;
-      box-shadow: var(--shadow-card);
-      font-size: 11px;
-      color: var(--text-muted);
-      max-width: 190px;
-    }
-
-    .map-legend-title {
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 6px;
-      font-size: 12px;
-    }
-
-    .map-legend-item {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 2px 0;
-    }
-
-    .map-legend-dot {
-      border-radius: 50%;
-      background: #6366f1;
-      opacity: 0.55;
-      flex-shrink: 0;
-    }
-
-    /* Leaflet layer selector — ให้ใช้ฟอนต์เดียวกับหน้าเว็บ */
-    .leaflet-control-layers {
-      border: 1px solid var(--border) !important;
-      border-radius: 12px !important;
-      box-shadow: var(--shadow-card) !important;
-      padding: 8px 6px !important;
-      background: rgba(255, 255, 255, 0.97) !important;
-      font-family: 'Outfit', 'IBM Plex Sans Thai', sans-serif !important;
-    }
-
-    .leaflet-control-layers-expanded {
-      padding: 8px 8px !important;
-    }
-
-    .leaflet-control-layers-list {
-      margin: 0;
-    }
-
-    .leaflet-control-layers-base label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-      padding: 6px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-main);
-      transition: background 0.15s ease;
-    }
-
-    .leaflet-control-layers-base label:hover {
-      background: var(--primary-soft);
-    }
-
-    .leaflet-control-layers-base label>span {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .leaflet-control-layers-selector {
-      width: 15px;
-      height: 15px;
-      margin: 0 !important;
-      accent-color: var(--primary);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .leaflet-control-layers-separator {
-      margin: 6px 4px;
-      border-top-color: var(--border);
-    }
-
-    /* Layer mapping list (ranked legend below the map) */
-    .layer-map {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .layer-row {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 15px 20px;
-      border-radius: 14px;
-      background: #fff;
-      border: 1px solid var(--border);
-      overflow: hidden;
-      transition: var(--transition-smooth);
-    }
-
-    .layer-row:hover {
-      transform: translateX(5px);
-      box-shadow: var(--shadow-hover);
-      border-color: var(--border-hover);
-    }
-
-    .layer-fill {
-      position: absolute;
-      inset: 0 auto 0 0;
-      opacity: 0.10;
-      transition: width 0.6s ease;
-      z-index: 0;
-    }
-
-    .layer-edge {
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 4px;
-      z-index: 1;
-    }
-
-    .layer-rank {
-      position: relative;
-      z-index: 2;
-      width: 26px;
-      height: 26px;
-      border-radius: 8px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .layer-pin {
-      position: relative;
-      z-index: 2;
-      width: 40px;
-      height: 40px;
-      border-radius: 11px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .layer-info {
-      position: relative;
-      z-index: 2;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .layer-name {
-      font-size: 14.5px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .layer-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .layer-stats {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      gap: 22px;
-      flex-shrink: 0;
-    }
-
-    .layer-stat {
-      text-align: right;
-    }
-
-    .layer-stat-value {
-      font-size: 16px;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-    }
-
-    .layer-stat-label {
-      font-size: 11px;
-      color: var(--text-faint);
-    }
-
-    @media (max-width: 720px) {
-      .layer-stats {
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
-      }
-    }
-
-    /* Tables */
-    .table-responsive {
-      width: 100%;
-      overflow-x: auto;
-      margin-top: 16px;
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .data-table th {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-muted);
-      font-weight: 600;
-      position: sticky;
-      top: 0;
-      background: #f8fafc;
-      text-align: left;
-    }
-
-    .data-table td {
-      padding: 13px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-main);
-      vertical-align: top;
-    }
-
-    .data-table tr:hover td {
-      background: #f8fafc;
-    }
-
-    .cell-clip {
-      max-width: 240px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .code-cell {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--secondary);
-      font-size: 12px;
-    }
-
-    .num-cell {
-      text-align: right;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      border-radius: 99px;
-      font-size: 12px;
-      font-weight: 500;
-      background: rgba(99, 102, 241, 0.12);
-      color: #4f46e5;
-    }
-
-    .chip-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .chip-cyan {
-      background: rgba(8, 145, 178, 0.12);
-      color: #0e7490;
-    }
-
-    .chip-emerald {
-      background: rgba(5, 150, 105, 0.12);
-      color: #047857;
-    }
-
-    .rank-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 13px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: #fff;
-    }
-
-    /* ===== Issue drilldown modal (รายละเอียดรายโครงการต่อประเด็น) ===== */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(3px);
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.25s ease, visibility 0.25s ease;
-    }
-
-    .modal-overlay.open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .modal-panel {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      box-shadow: var(--shadow-hover);
-      width: min(880px, 100%);
-      max-height: calc(100vh - 48px);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transform: translateY(16px) scale(0.98);
-      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .modal-overlay.open .modal-panel {
-      transform: translateY(0) scale(1);
-    }
-
-    .modal-head {
-      position: relative;
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 22px 24px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .modal-head-accent {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-    }
-
-    .modal-head-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 13px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      font-family: 'Prompt', sans-serif;
-      color: var(--text-main);
-      line-height: 1.35;
-    }
-
-    .modal-sub {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-
-    .modal-sub b {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-    }
-
-    /* "ดูรายละเอียด (แบบ จ.1)" — ลิงก์ไปหน้าสรุปโครงการรายประเด็น */
-    .modal-summary-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 12px;
-      padding: 7px 14px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fff;
-      font-size: 13px;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      transition: var(--transition-smooth);
-    }
-
-    .modal-summary-link svg {
-      transition: transform 0.25s ease;
-    }
-
-    .modal-summary-link:hover {
-      box-shadow: var(--shadow-hover);
-      transform: translateY(-1px);
-    }
-
-    .modal-summary-link:hover svg:last-child {
-      transform: translateX(3px);
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text-muted);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: var(--transition-smooth);
-    }
-
-    .modal-close:hover {
-      border-color: var(--border-hover);
-      color: var(--text-main);
-      background: var(--bg-base);
-    }
-
-    .modal-body {
-      padding: 18px 24px 24px;
-      overflow-y: auto;
-    }
-
-    .mp-card {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px 18px;
-      margin-bottom: 14px;
-      background: #fff;
-    }
-
-    .mp-card:last-child {
-      margin-bottom: 0;
-    }
-
-    /* Clickable project card → opens the จ.1-1 project brief */
-    a.mp-card {
-      display: block;
-      text-decoration: none;
-      color: inherit;
-      cursor: pointer;
-    }
-
-    a.mp-card:hover {
-      border-color: var(--border-hover);
-      box-shadow: var(--shadow-hover);
-      transform: translateY(-2px);
-    }
-
-    .mp-brief-hint {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px dashed var(--border);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .mp-brief-hint svg {
-      transition: transform 0.25s ease;
-    }
-
-    a.mp-card:hover .mp-brief-hint svg {
-      transform: translateX(3px);
-    }
-
-    .mp-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-    }
-
-    .mp-name {
-      font-size: 14.5px;
-      font-weight: 600;
-      color: var(--text-main);
-      line-height: 1.4;
-    }
-
-    .mp-meta {
-      font-size: 12.5px;
-      color: var(--text-muted);
-      margin-top: 4px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 14px;
-    }
-
-    .mp-budget {
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    .mp-budget-val {
-      font-size: 16px;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .mp-budget-lbl {
-      font-size: 11px;
-      color: var(--text-faint);
-    }
-
-    .mp-acts {
-      margin-top: 12px;
-      border-top: 1px dashed var(--border);
-      padding-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .mp-act {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 12.5px;
-    }
-
-    .mp-act-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      background: var(--text-faint);
-    }
-
-    .mp-act-name {
-      flex: 1;
-      min-width: 0;
-      color: var(--text-main);
-    }
-
-    .mp-act-area {
-      color: var(--text-muted);
-      font-size: 11.5px;
-      white-space: nowrap;
-    }
-
-    .mp-act-budget {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      color: var(--text-main);
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-
-    .mp-act.is-zero,
-    .mp-card.is-zero {
-      opacity: 0.4;
-    }
-
-    @media (max-width: 560px) {
-      .mp-top {
-        flex-direction: column;
+      $pct = round($bud / $maxArea * 100);
+      $areaList[] = ['name' => $area, 'budget' => $bud, 'acts' => $areaActs[$area] ?? 0, 'pct' => $pct,
+      'color' => $color, 'rank' => $ai + 1];
+      $areaMap[] = [
+      'name' => $area, 'budget' => $bud, 'acts' => $areaActs[$area] ?? 0, 'color' => $color,
+      'lat' => $areaCoords[$area][0] ?? 16.42, 'lng' => $areaCoords[$area][1] ?? 101.15, 'pct' => $pct,
+      'issues' => $issueBreak, 'guides' => $guideBreak,
+      'domIssue' => $issueBreak[0] ?? ['name' => '—', 'budget' => 0, 'color' => '#64748b'],
+      'domGuide' => $guideBreak[0] ?? ['name' => '—', 'budget' => 0, 'color' => '#64748b'],
+      ];
+      $ai++;
       }
 
-      .mp-budget {
-        text-align: left;
-      }
-    }
-  </style>
+      // top 5 โครงการตามงบในสโคปนี้
+      $topIdx = collect($projBudget)->sortDesc()->take(5)->keys();
+      $top = [];
+      foreach ($topIdx as $pi) {
+      if (($projBudget[$pi] ?? 0) <= 0) continue; $top[]=['name'=> $projects[$pi]['project_name'], 'agency' =>
+        $projects[$pi]['operating_agency'],
+        'budget' => $projBudget[$pi]];
+        }
 
-  <div class="bg-glow-1"></div>
-  <div class="bg-glow-2"></div>
+        $totalBudget = array_sum($detailBudget);
+        $activeProjects = count(array_filter($projBudget, fn($b) => $b > 0));
 
-  <div class="dashboard-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="logo-section">
-        <div class="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 3v18h18" />
-            <path d="M18 17V9" />
-            <path d="M13 17V5" />
-            <path d="M8 17v-3" />
-          </svg>
-        </div>
-        <div>
-          <h1 class="logo-title">Phetchabun Project Dashboard</h1>
-          <span class="logo-subtitle">ภาพรวมข้อมูลโครงการ จังหวัดเพชรบูรณ์ 2571-2575</span>
-        </div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <span class="live-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          ข้อมูลจริง · {{ number_format($projects->count()) }} โครงการ
-        </span>
-        <a href="{{ route('phy70.linkage') }}" class="btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-          </svg>
-          การเชื่อมโยง
-        </a>
-        {{-- เมนูประเมินคุณภาพถูกปิดไว้ชั่วคราว
-        <a href="{{ route('phy70.scorecard') }}" class="btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 11l3 3L22 4" />
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-          </svg>
-          ประเมินคุณภาพ
-        </a>
-        --}}
-        <a href="{{ route('phy70.index') }}" class="btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </svg>
-          กลับหน้าหลัก
-        </a>
-      </div>
-    </header>
+        // สัดส่วนงบประมาณตามแนวทางการพัฒนา (share ของงบรวมในสโคปนี้)
+        $guideTotal = array_sum($guidelineBudget) ?: 1;
+        $guidelineItems = [];
+        foreach ($guidelineBudget as $gName => $gBud) {
+        if ($gBud <= 0) continue; $guidelineItems[]=['name'=> $gName, 'budget' => $gBud, 'pct' => round($gBud /
+          $guideTotal * 100),
+          'color' => ($guidelineColors[$gName] ?? '#64748b')];
+          }
 
-    <h2 class="page-title">แดชบอร์ดสรุปข้อมูลโครงการ</h2>
-    <p class="page-desc">ภาพรวมเชิงวิเคราะห์ของโครงการและกิจกรรมภายใต้แผนพัฒนาจังหวัด — สรุปงบประมาณ ประเด็นการพัฒนา
-      พื้นที่และกลุ่มเป้าหมาย</p>
+          return [
+          'kpi' => [
+          'projects' => $activeProjects,
+          'activities' => count(array_filter($detailBudget, fn($b) => $b > 0)),
+          'total_budget' => $totalBudget,
+          'agencies' => collect($projects)->filter(fn($p, $pi) => ($projBudget[$pi] ?? 0) > 0)
+          ->pluck('operating_agency')->unique()->count(),
+          'target_areas' => count(array_filter($areaBudget, fn($b) => $b > 0)),
+          'avg_budget' => $activeProjects ? round($totalBudget / $activeProjects) : 0,
+          ],
+          'issues' => $issues,
+          'agency' => ['labels' => array_keys($agencyBudget), 'values' => array_values($agencyBudget)],
+          'group' => ['labels' => array_keys($groupBudget), 'values' => array_values($groupBudget)],
+          'guideline' => [
+          'labels' => array_column($guidelineItems, 'name'),
+          'values' => array_column($guidelineItems, 'budget'),
+          'colors' => array_column($guidelineItems, 'color'),
+          'items' => $guidelineItems,
+          ],
+          'areaList' => $areaList,
+          'areaMap' => $areaMap,
+          'top' => $top,
+          'projBudget' => array_map(fn($pi) => $projBudget[$pi] ?? 0, array_keys($projBudget)),
+          'detailBudget' => $detailBudget,
+          ];
+          };
 
-    @if($projects->isEmpty())
-    <!-- No proposals in the database yet -->
-    <div class="glass-card">
-      <div class="empty-state">
-        <div class="empty-icon" style="width: 64px; height: 64px; border-radius: 18px;">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 3v18h18" />
-            <path d="M18 17V9" />
-            <path d="M13 17V5" />
-            <path d="M8 17v-3" />
-          </svg>
-        </div>
-        <div class="empty-title" style="font-size: 18px;">ยังไม่มีข้อมูลโครงการ</div>
-        <div class="empty-desc">ยังไม่มีข้อเสนอโครงการในระบบ เมื่อมีการบันทึกข้อเสนอโครงการแล้ว
-          แดชบอร์ดจะแสดงสรุปงบประมาณ ประเด็นการพัฒนา พื้นที่ และกลุ่มเป้าหมายโดยอัตโนมัติ</div>
-        <a href="{{ route('phy70.proposal.create') }}" class="btn-secondary" style="margin-top: 6px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          เพิ่มข้อเสนอโครงการ
-        </a>
-      </div>
-    </div>
-    @else
+          // ภาพรวม = งบรวมของกิจกรรม / รายปี = งบเฉพาะปีนั้นใน yearly_budgets
+          $scopes = ['overview' => $buildScope(fn($d) => $d['budget'])];
+          foreach ($years as $y) {
+          $scopes[$y] = $buildScope(fn($d) => $d['yearly_budgets'][$y] ?? 0);
+          }
 
-    <!-- Year selector (ภาพรวม + รายปี) -->
-    <div class="year-selector" id="yearSelector">
-      <button type="button" class="year-btn active" data-scope="overview">ภาพรวม<small>ทุกปี</small></button>
-      @foreach($years as $y)
-      <button type="button" class="year-btn" data-scope="{{ $y }}">ปี {{ $y }}</button>
-      @endforeach
-    </div>
-    <div class="scope-note" id="scopeNote" style="display: none;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-      </svg>
-      <span>กำลังแสดงเฉพาะงบประมาณของ <b id="scopeNoteYear"></b> — รายการที่ไม่มีงบในปีนี้จะถูกจางลง</span>
-    </div>
+          // Stacked bar — งบประมาณรายปี (แกน X = ปี, ซ้อนสีตามประเด็น) สำหรับโหมดภาพรวม
+          $stackIssues = collect($scopes['overview']['issues'])->pluck('name');
+          $stackedSeries = [];
+          foreach ($stackIssues as $isName) {
+          $m = $issueMeta[$isName] ?? $issueDefault;
+          $data = [];
+          foreach ($years as $y) {
+          $row = collect($scopes[$y]['issues'])->firstWhere('name', $isName);
+          $data[] = $row ? $row['budget'] : 0;
+          }
+          $stackedSeries[] = ['name' => $isName, 'color' => $m['color'], 'data' => $data];
+          }
+          $stackedTotals = [];
+          foreach ($years as $y) { $stackedTotals[] = $scopes[$y]['kpi']['total_budget']; }
 
-    <!-- KPI cards -->
-    <div class="kpi-grid">
-      <div class="glass-card kpi-card">
-        <div class="kpi-head">
-          <div class="kpi-icon" style="background: rgba(99,102,241,0.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-          </div>
-          <span class="kpi-label">จำนวนโครงการทั้งหมด</span>
-        </div>
-        <div class="kpi-value"><span id="kpi-projects">{{ number_format($kpi['projects']) }}</span><span class="kpi-unit">โครงการ</span></div>
-      </div>
+          // ---- Per-issue project drilldown payload --------------------------
+          // จัดกลุ่มโครงการตาม "ประเด็น" พร้อมกิจกรรมของแต่ละโครงการ และแนบ pindex/dindex
+          // (ลำดับเดียวกับตาราง data-pindex/data-dindex) เพื่อให้ modal คำนวณงบตามปีที่เลือกได้
+          $issueProjects = [];
+          $dIdx = 0;
+          foreach ($projects as $pi => $p) {
+          $isName = $p['province_issue'];
+          $acts = [];
+          foreach ($p['details'] as $d) {
+          $acts[] = [
+          'dindex' => $dIdx,
+          'activity' => $d['activity'],
+          'guideline' => $d['guideline'],
+          'target_area' => $d['target_area'],
+          'target_group' => $d['target_group'],
+          'budget' => $d['budget'],
+          ];
+          $dIdx++;
+          }
+          $issueProjects[$isName][] = [
+          'pindex' => $pi,
+          'db_id' => $p['db_id'],
+          'id' => $p['project_id'],
+          'name' => $p['project_name'],
+          'agency' => $p['operating_agency'],
+          'guideline' => $p['province_guideline'],
+          'budget' => $p['total_budget'],
+          'acts' => $acts,
+          ];
+          }
 
-      <div class="glass-card kpi-card">
-        <div class="kpi-head">
-          <div class="kpi-icon" style="background: rgba(8,145,178,0.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-          </div>
-          <span class="kpi-label">จำนวนกิจกรรมทั้งหมด</span>
-        </div>
-        <div class="kpi-value"><span id="kpi-activities">{{ number_format($kpi['activities']) }}</span><span class="kpi-unit">กิจกรรม</span></div>
-      </div>
+          // ---- Inline SVG path library --------------------------------------
+          $svgIcons = [
+          'activity' => '
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />',
+          'mountain' => '
+          <path d="m8 3 4 8 5-5 5 15H2L8 3z" />',
+          'heart' => '
+          <path
+            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+          ',
+          'child' => '
+          <circle cx="12" cy="5" r="2.4" />
+          <path d="M12 7.4v6m0 0-3 4.6m3-4.6 3 4.6M8 10.2h8" />',
+          'flag' => '
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+          <line x1="4" y1="22" x2="4" y2="15" />',
+          'pin' => '
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+          <circle cx="12" cy="10" r="3" />',
+          'layers' => '
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />',
+          ];
+          @endphp
 
-      <div class="glass-card kpi-card">
-        <div class="kpi-head">
-          <div class="kpi-icon" style="background: rgba(5,150,105,0.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-          </div>
-          <span class="kpi-label">งบประมาณรวมทั้งหมด</span>
-        </div>
-        @php
-            $budgetVal = $kpi['total_budget'];
-            $budgetDisplay = $budgetVal > 1000000 ? number_format($budgetVal / 1000000, 2) : number_format($budgetVal);
-            $budgetUnit = $budgetVal > 1000000 ? 'ล้านบาท' : 'บาท';
-        @endphp
-        <div class="kpi-value"><span id="kpi-total_budget">{{ $budgetDisplay }}</span><span id="kpi-total_budget-unit" class="kpi-unit">{{ $budgetUnit }}</span></div>
-      </div>
+          <style>
+            :root {
+              --bg-base: #f3f5fb;
+              --bg-surface: #ffffff;
+              --border: #e6e9f2;
+              --border-hover: #c7cde0;
+              --primary: #6366f1;
+              --primary-soft: rgba(99, 102, 241, 0.10);
+              --secondary: #0891b2;
+              --success: #059669;
+              --warning: #d97706;
+              --danger: #dc2626;
+              --text-main: #1e293b;
+              --text-muted: #64748b;
+              --text-faint: #94a3b8;
+              --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
+              --shadow-hover: 0 4px 8px rgba(16, 24, 40, 0.06), 0 16px 40px rgba(16, 24, 40, 0.10);
+              --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
 
-      <div class="glass-card kpi-card">
-        <div class="kpi-head">
-          <div class="kpi-icon" style="background: rgba(217,119,6,0.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
-              <path d="M3 21h18" />
-              <path d="M5 21V7l8-4v18" />
-              <path d="M19 21V11l-6-4" />
-            </svg>
-          </div>
-          <span class="kpi-label">หน่วยงานดำเนินการ</span>
-        </div>
-        <div class="kpi-value"><span id="kpi-agencies">{{ number_format($kpi['agencies']) }}</span><span class="kpi-unit">หน่วยงาน</span></div>
-      </div>
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
 
-      <div class="glass-card kpi-card">
-        <div class="kpi-head">
-          <div class="kpi-icon" style="background: rgba(168,85,247,0.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-          </div>
-          <span class="kpi-label">พื้นที่เป้าหมาย</span>
-        </div>
-        <div class="kpi-value"><span id="kpi-target_areas">{{ number_format($kpi['target_areas']) }}</span><span class="kpi-unit">ตำบล</span></div>
-      </div>
+            body {
+              background-color: var(--bg-base) !important;
+              color: var(--text-main);
+              font-family: 'Outfit', 'Prompt', 'IBM Plex Sans Thai', sans-serif;
+              min-height: 100vh;
+              overflow-x: hidden;
+              position: relative;
+            }
 
-      <div class="glass-card kpi-card">
-        <div class="kpi-head">
-          <div class="kpi-icon" style="background: rgba(236,72,153,0.12);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            </svg>
-          </div>
-          <span class="kpi-label">งบประมาณเฉลี่ย/โครงการ</span>
-        </div>
-        @php
-            $avgBudgetVal = $kpi['avg_budget'];
-            $avgBudgetDisplay = $avgBudgetVal > 1000000 ? number_format($avgBudgetVal / 1000000, 2) : number_format($avgBudgetVal);
-            $avgBudgetUnit = $avgBudgetVal > 1000000 ? 'ล้านบาท' : 'บาท';
-        @endphp
-        <div class="kpi-value"><span id="kpi-avg_budget">{{ $avgBudgetDisplay }}</span><span id="kpi-avg_budget-unit" class="kpi-unit">{{ $avgBudgetUnit }}</span></div>
-      </div>
-    </div>
+            .bg-glow-1,
+            .bg-glow-2 {
+              position: fixed;
+              border-radius: 50%;
+              pointer-events: none;
+              z-index: 0;
+            }
 
-    <!-- Issue cards (ประเด็นการพัฒนา — icon + สีต่อประเด็น) -->
-    <div class="glass-card section-block">
-      <h3 class="section-title" style="color: var(--primary);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">{!!
-          $svgIcons['flag'] !!}</svg>
-        ประเด็นการพัฒนาของจังหวัด
-      </h3>
-      <p class="section-sub">งบประมาณและจำนวนโครงการแยกตามประเด็นการพัฒนา — แต่ละประเด็นมีสีและไอคอนกำกับ</p>
-      <div class="issue-grid">
-        @forelse(collect($budgetByIssue)->sortKeys() as $issue => $budget)
-        @php $m = $issueMeta[$issue] ?? $issueDefault; @endphp
-        <div class="issue-card" data-issue="{{ $issue }}" role="button" tabindex="0"
-          aria-label="ดูรายละเอียดรายโครงการของประเด็น {{ $issue }}">
-          <div class="issue-accent" style="background: {{ $m['color'] }};"></div>
-          <div class="issue-top">
-            <div class="issue-icon" style="background: {{ $m['bg'] }};">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ $m['color'] }}" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons[$m['icon']] !!}</svg>
+            .bg-glow-1 {
+              width: 620px;
+              height: 620px;
+              top: -280px;
+              left: -220px;
+              background: radial-gradient(circle, rgba(99, 102, 241, 0.10) 0%, transparent 70%);
+            }
+
+            .bg-glow-2 {
+              width: 520px;
+              height: 520px;
+              bottom: -180px;
+              right: -120px;
+              background: radial-gradient(circle, rgba(8, 145, 178, 0.09) 0%, transparent 70%);
+            }
+
+            .dashboard-container {
+              max-width: 1440px;
+              margin: 0 auto;
+              padding: 40px 24px;
+              position: relative;
+              z-index: 10;
+            }
+
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 32px;
+              flex-wrap: wrap;
+              gap: 20px;
+            }
+
+            .logo-section {
+              display: flex;
+              align-items: center;
+              gap: 16px;
+            }
+
+            .logo-icon {
+              width: 48px;
+              height: 48px;
+              background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+              border-radius: 14px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 8px 20px rgba(99, 102, 241, 0.30);
+            }
+
+            .logo-title {
+              font-size: 26px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+              color: var(--text-main);
+            }
+
+            .logo-subtitle {
+              font-size: 12px;
+              color: var(--secondary);
+              font-family: 'JetBrains Mono', monospace;
+              letter-spacing: 2px;
+              text-transform: uppercase;
+            }
+
+            .btn-secondary {
+              background: #fff;
+              border: 1px solid var(--border);
+              color: var(--text-main);
+              padding: 10px 18px;
+              border-radius: 12px;
+              font-family: inherit;
+              font-size: 13px;
+              font-weight: 600;
+              cursor: pointer;
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              text-decoration: none;
+              transition: var(--transition-smooth);
+              box-shadow: var(--shadow-card);
+            }
+
+            .btn-secondary:hover {
+              border-color: var(--border-hover);
+              box-shadow: var(--shadow-hover);
+            }
+
+            .mockup-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              background: rgba(217, 119, 6, 0.10);
+              border: 1px solid rgba(217, 119, 6, 0.25);
+              color: var(--warning);
+              padding: 5px 12px;
+              border-radius: 99px;
+              font-size: 12px;
+              font-weight: 500;
+            }
+
+            .live-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              background: rgba(5, 150, 105, 0.10);
+              border: 1px solid rgba(5, 150, 105, 0.25);
+              color: var(--success);
+              padding: 5px 12px;
+              border-radius: 99px;
+              font-size: 12px;
+              font-weight: 500;
+            }
+
+            /* Empty state — shown wherever a section has no data yet */
+            .empty-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 12px;
+              text-align: center;
+              color: var(--text-muted);
+              padding: 40px 20px;
+              width: 100%;
+            }
+
+            .empty-state.compact {
+              padding: 28px 16px;
+            }
+
+            .empty-icon {
+              width: 52px;
+              height: 52px;
+              border-radius: 14px;
+              flex-shrink: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: var(--primary-soft);
+              color: var(--primary);
+            }
+
+            .empty-title {
+              font-size: 15px;
+              font-weight: 600;
+              color: var(--text-main);
+            }
+
+            .empty-desc {
+              font-size: 13px;
+              color: var(--text-muted);
+              max-width: 420px;
+              line-height: 1.5;
+            }
+
+            .empty-cell {
+              text-align: center;
+              color: var(--text-muted);
+              padding: 36px 16px !important;
+              font-size: 13.5px;
+            }
+
+            .glass-card {
+              background: var(--bg-surface);
+              border: 1px solid var(--border);
+              border-radius: 20px;
+              padding: 24px;
+              transition: var(--transition-smooth);
+              box-shadow: var(--shadow-card);
+            }
+
+            .glass-card:hover {
+              border-color: var(--border-hover);
+              box-shadow: var(--shadow-hover);
+            }
+
+            .page-title {
+              font-size: 24px;
+              font-weight: 700;
+              font-family: 'Prompt', sans-serif;
+              margin-bottom: 6px;
+              color: var(--text-main);
+            }
+
+            .page-desc {
+              color: var(--text-muted);
+              font-size: 14px;
+              margin-bottom: 28px;
+            }
+
+            /* Year selector (ภาพรวม + รายปี) */
+            .year-selector {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              gap: 6px;
+              background: var(--bg-surface);
+              border: 1px solid var(--border);
+              border-radius: 14px;
+              padding: 6px;
+              margin-bottom: 24px;
+              box-shadow: var(--shadow-card);
+              width: fit-content;
+              max-width: 100%;
+            }
+
+            .year-btn {
+              appearance: none;
+              border: none;
+              background: transparent;
+              color: var(--text-muted);
+              font-family: inherit;
+              font-size: 13.5px;
+              font-weight: 600;
+              padding: 9px 18px;
+              border-radius: 10px;
+              cursor: pointer;
+              transition: var(--transition-smooth);
+              white-space: nowrap;
+            }
+
+            .year-btn:hover {
+              background: var(--primary-soft);
+              color: var(--primary);
+            }
+
+            .year-btn.active {
+              background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+              color: #fff;
+              box-shadow: 0 4px 12px rgba(99, 102, 241, 0.30);
+            }
+
+            .year-btn small {
+              font-weight: 500;
+              opacity: 0.75;
+              font-size: 11px;
+              margin-left: 5px;
+              font-family: 'JetBrains Mono', monospace;
+            }
+
+            .scope-note {
+              font-size: 13px;
+              color: var(--text-muted);
+              margin: -12px 0 22px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+
+            .scope-note b {
+              color: var(--primary);
+            }
+
+            /* Dim rows/cards that have no budget in the selected year */
+            .is-zero {
+              opacity: 0.38;
+              filter: grayscale(0.4);
+            }
+
+            /* Elements shown only in overview mode (hidden when a year is picked) */
+            .overview-only.hide-scope {
+              display: none;
+            }
+
+            /* KPI cards */
+            .kpi-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+              gap: 20px;
+              margin-bottom: 28px;
+            }
+
+            .kpi-card {
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+            }
+
+            .kpi-head {
+              display: flex;
+              align-items: center;
+              gap: 10px;
+            }
+
+            .kpi-icon {
+              width: 40px;
+              height: 40px;
+              border-radius: 12px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            }
+
+            .kpi-label {
+              font-size: 13px;
+              color: var(--text-muted);
+              font-weight: 500;
+              line-height: 1.3;
+            }
+
+            .kpi-value {
+              font-size: 30px;
+              font-weight: 700;
+              color: var(--text-main);
+              font-family: 'Outfit', sans-serif;
+            }
+
+            .kpi-unit {
+              font-size: 13px;
+              color: var(--text-faint);
+              font-weight: 500;
+              margin-left: 4px;
+            }
+
+            /* Charts */
+            .charts-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 24px;
+              margin-bottom: 28px;
+            }
+
+            .chart-card {
+              display: flex;
+              flex-direction: column;
+            }
+
+            .chart-canvas-wrap {
+              position: relative;
+              height: 300px;
+              margin-top: 12px;
+            }
+
+            @media (max-width: 900px) {
+              .charts-grid {
+                grid-template-columns: 1fr;
+              }
+            }
+
+            .section-title {
+              font-size: 17px;
+              font-weight: 600;
+              font-family: 'Prompt', sans-serif;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              color: var(--text-main);
+            }
+
+            .section-sub {
+              font-size: 13px;
+              color: var(--text-muted);
+              margin-top: 4px;
+            }
+
+            .section-block {
+              margin-bottom: 28px;
+            }
+
+            /* Issue cards (ประเด็นการพัฒนา) */
+            .issue-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+              gap: 18px;
+              margin-top: 18px;
+            }
+
+            .issue-card {
+              position: relative;
+              background: #fff;
+              border: 1px solid var(--border);
+              border-radius: 16px;
+              padding: 18px 18px 16px;
+              overflow: hidden;
+              transition: var(--transition-smooth);
+              cursor: pointer;
+            }
+
+            .issue-card:hover {
+              box-shadow: var(--shadow-hover);
+              transform: translateY(-2px);
+            }
+
+            .issue-card:focus-visible {
+              outline: 2px solid var(--primary);
+              outline-offset: 2px;
+            }
+
+            /* affordance: "คลิกเพื่อดูรายโครงการ" ที่มุมล่างขวาของการ์ด */
+            .issue-drill {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              margin-top: 12px;
+              font-size: 12px;
+              font-weight: 600;
+              opacity: 0.85;
+            }
+
+            .issue-drill svg {
+              transition: transform 0.25s ease;
+            }
+
+            .issue-card:hover .issue-drill svg {
+              transform: translateX(3px);
+            }
+
+            .issue-accent {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 4px;
+            }
+
+            .issue-top {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+              margin-bottom: 14px;
+            }
+
+            .issue-icon {
+              width: 44px;
+              height: 44px;
+              border-radius: 12px;
+              flex-shrink: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .issue-name {
+              font-size: 14px;
+              font-weight: 600;
+              line-height: 1.4;
+              color: var(--text-main);
+            }
+
+            .issue-count {
+              font-size: 12px;
+              color: var(--text-muted);
+              margin-top: 2px;
+            }
+
+            .issue-budget {
+              font-size: 22px;
+              font-weight: 700;
+              font-family: 'Outfit', sans-serif;
+            }
+
+            .issue-budget small {
+              font-size: 12px;
+              font-weight: 500;
+              color: var(--text-faint);
+              margin-left: 4px;
+            }
+
+            .issue-bar {
+              height: 7px;
+              border-radius: 99px;
+              background: #eef1f7;
+              overflow: hidden;
+              margin-top: 12px;
+            }
+
+            .issue-bar-fill {
+              height: 100%;
+              border-radius: 99px;
+              transition: width 0.6s ease;
+            }
+
+            /* Real map (ข้อมูลพื้นที่) */
+            .area-map-wrap {
+              position: relative;
+              margin-top: 18px;
+              height: 480px;
+              border-radius: 16px;
+              overflow: hidden;
+              border: 1px solid var(--border);
+              box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+            }
+
+            #areaMap {
+              width: 100%;
+              height: 100%;
+              background: #eaeef5;
+            }
+
+            .leaflet-popup-content-wrapper {
+              border-radius: 12px;
+              box-shadow: var(--shadow-hover);
+            }
+
+            .leaflet-popup-content {
+              margin: 12px 14px;
+              font-family: 'Outfit', 'IBM Plex Sans Thai', sans-serif;
+            }
+
+            .map-pop-name {
+              font-size: 14px;
+              font-weight: 700;
+              color: #1e293b;
+              margin-bottom: 6px;
+            }
+
+            .map-pop-row {
+              display: flex;
+              justify-content: space-between;
+              gap: 18px;
+              font-size: 12.5px;
+              color: #475569;
+              padding: 2px 0;
+            }
+
+            .map-pop-row b {
+              font-family: 'JetBrains Mono', monospace;
+              color: #1e293b;
+            }
+
+            .map-legend {
+              position: absolute;
+              z-index: 500;
+              bottom: 14px;
+              right: 14px;
+              background: rgba(255, 255, 255, 0.95);
+              border: 1px solid var(--border);
+              border-radius: 12px;
+              padding: 10px 12px;
+              box-shadow: var(--shadow-card);
+              font-size: 11px;
+              color: var(--text-muted);
+              max-width: 190px;
+            }
+
+            .map-legend-title {
+              font-weight: 700;
+              color: var(--text-main);
+              margin-bottom: 6px;
+              font-size: 12px;
+            }
+
+            .map-legend-item {
+              display: flex;
+              align-items: center;
+              gap: 7px;
+              padding: 2px 0;
+            }
+
+            .map-legend-dot {
+              border-radius: 50%;
+              background: #6366f1;
+              opacity: 0.55;
+              flex-shrink: 0;
+            }
+
+            /* Leaflet layer selector — ให้ใช้ฟอนต์เดียวกับหน้าเว็บ */
+            .leaflet-control-layers {
+              border: 1px solid var(--border) !important;
+              border-radius: 12px !important;
+              box-shadow: var(--shadow-card) !important;
+              padding: 8px 6px !important;
+              background: rgba(255, 255, 255, 0.97) !important;
+              font-family: 'Outfit', 'IBM Plex Sans Thai', sans-serif !important;
+            }
+
+            .leaflet-control-layers-expanded {
+              padding: 8px 8px !important;
+            }
+
+            .leaflet-control-layers-list {
+              margin: 0;
+            }
+
+            .leaflet-control-layers-base label {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin: 0;
+              padding: 6px 10px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 13px;
+              font-weight: 500;
+              color: var(--text-main);
+              transition: background 0.15s ease;
+            }
+
+            .leaflet-control-layers-base label:hover {
+              background: var(--primary-soft);
+            }
+
+            .leaflet-control-layers-base label>span {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+
+            .leaflet-control-layers-selector {
+              width: 15px;
+              height: 15px;
+              margin: 0 !important;
+              accent-color: var(--primary);
+              cursor: pointer;
+              flex-shrink: 0;
+            }
+
+            .leaflet-control-layers-separator {
+              margin: 6px 4px;
+              border-top-color: var(--border);
+            }
+
+            /* Layer mapping list (ranked legend below the map) */
+            .layer-map {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              margin-top: 18px;
+            }
+
+            .layer-row {
+              position: relative;
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              padding: 15px 20px;
+              border-radius: 14px;
+              background: #fff;
+              border: 1px solid var(--border);
+              overflow: hidden;
+              transition: var(--transition-smooth);
+            }
+
+            .layer-row:hover {
+              transform: translateX(5px);
+              box-shadow: var(--shadow-hover);
+              border-color: var(--border-hover);
+            }
+
+            .layer-fill {
+              position: absolute;
+              inset: 0 auto 0 0;
+              opacity: 0.10;
+              transition: width 0.6s ease;
+              z-index: 0;
+            }
+
+            .layer-edge {
+              position: absolute;
+              inset: 0 auto 0 0;
+              width: 4px;
+              z-index: 1;
+            }
+
+            .layer-rank {
+              position: relative;
+              z-index: 2;
+              width: 26px;
+              height: 26px;
+              border-radius: 8px;
+              flex-shrink: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+              font-weight: 700;
+              color: #fff;
+            }
+
+            .layer-pin {
+              position: relative;
+              z-index: 2;
+              width: 40px;
+              height: 40px;
+              border-radius: 11px;
+              flex-shrink: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .layer-info {
+              position: relative;
+              z-index: 2;
+              flex: 1;
+              min-width: 0;
+            }
+
+            .layer-name {
+              font-size: 14.5px;
+              font-weight: 600;
+              color: var(--text-main);
+            }
+
+            .layer-sub {
+              font-size: 12px;
+              color: var(--text-muted);
+              margin-top: 2px;
+            }
+
+            .layer-stats {
+              position: relative;
+              z-index: 2;
+              display: flex;
+              align-items: center;
+              gap: 22px;
+              flex-shrink: 0;
+            }
+
+            .layer-stat {
+              text-align: right;
+            }
+
+            .layer-stat-value {
+              font-size: 16px;
+              font-weight: 700;
+              font-family: 'JetBrains Mono', monospace;
+              color: var(--text-main);
+            }
+
+            .layer-stat-label {
+              font-size: 11px;
+              color: var(--text-faint);
+            }
+
+            @media (max-width: 720px) {
+              .layer-stats {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 6px;
+              }
+            }
+
+            /* Tables */
+            .table-responsive {
+              width: 100%;
+              overflow-x: auto;
+              margin-top: 16px;
+            }
+
+            .data-table {
+              width: 100%;
+              border-collapse: collapse;
+              text-align: left;
+              font-size: 13px;
+              white-space: nowrap;
+            }
+
+            .data-table th {
+              padding: 14px 16px;
+              border-bottom: 1px solid var(--border);
+              color: var(--text-muted);
+              font-weight: 600;
+              position: sticky;
+              top: 0;
+              background: #f8fafc;
+              text-align: left;
+            }
+
+            .data-table td {
+              padding: 13px 16px;
+              border-bottom: 1px solid var(--border);
+              color: var(--text-main);
+              vertical-align: top;
+            }
+
+            .data-table tr:hover td {
+              background: #f8fafc;
+            }
+
+            .cell-clip {
+              max-width: 240px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .code-cell {
+              font-family: 'JetBrains Mono', monospace;
+              color: var(--secondary);
+              font-size: 12px;
+            }
+
+            .num-cell {
+              text-align: right;
+              font-family: 'JetBrains Mono', monospace;
+              font-weight: 600;
+            }
+
+            .chip {
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              padding: 3px 10px;
+              border-radius: 99px;
+              font-size: 12px;
+              font-weight: 500;
+              background: rgba(99, 102, 241, 0.12);
+              color: #4f46e5;
+            }
+
+            .chip-dot {
+              width: 7px;
+              height: 7px;
+              border-radius: 50%;
+              flex-shrink: 0;
+            }
+
+            .chip-cyan {
+              background: rgba(8, 145, 178, 0.12);
+              color: #0e7490;
+            }
+
+            .chip-emerald {
+              background: rgba(5, 150, 105, 0.12);
+              color: #047857;
+            }
+
+            .rank-badge {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 26px;
+              height: 26px;
+              border-radius: 8px;
+              font-weight: 700;
+              font-size: 13px;
+              background: linear-gradient(135deg, var(--primary), var(--secondary));
+              color: #fff;
+            }
+
+            /* ===== Issue drilldown modal (รายละเอียดรายโครงการต่อประเด็น) ===== */
+            .modal-overlay {
+              position: fixed;
+              inset: 0;
+              z-index: 2000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 24px;
+              background: rgba(15, 23, 42, 0.45);
+              backdrop-filter: blur(3px);
+              opacity: 0;
+              visibility: hidden;
+              transition: opacity 0.25s ease, visibility 0.25s ease;
+            }
+
+            .modal-overlay.open {
+              opacity: 1;
+              visibility: visible;
+            }
+
+            .modal-panel {
+              background: var(--bg-surface);
+              border: 1px solid var(--border);
+              border-radius: 22px;
+              box-shadow: var(--shadow-hover);
+              width: min(880px, 100%);
+              max-height: calc(100vh - 48px);
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+              transform: translateY(16px) scale(0.98);
+              transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .modal-overlay.open .modal-panel {
+              transform: translateY(0) scale(1);
+            }
+
+            .modal-head {
+              position: relative;
+              display: flex;
+              align-items: flex-start;
+              gap: 14px;
+              padding: 22px 24px;
+              border-bottom: 1px solid var(--border);
+            }
+
+            .modal-head-accent {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 4px;
+            }
+
+            .modal-head-icon {
+              width: 46px;
+              height: 46px;
+              border-radius: 13px;
+              flex-shrink: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .modal-title {
+              font-size: 18px;
+              font-weight: 700;
+              font-family: 'Prompt', sans-serif;
+              color: var(--text-main);
+              line-height: 1.35;
+            }
+
+            .modal-sub {
+              font-size: 13px;
+              color: var(--text-muted);
+              margin-top: 3px;
+            }
+
+            .modal-sub b {
+              font-family: 'JetBrains Mono', monospace;
+              color: var(--text-main);
+            }
+
+            /* "ดูรายละเอียด (แบบ จ.1)" — ลิงก์ไปหน้าสรุปโครงการรายประเด็น */
+            .modal-summary-link {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              margin-top: 12px;
+              padding: 7px 14px;
+              border: 1px solid var(--border);
+              border-radius: 10px;
+              background: #fff;
+              font-size: 13px;
+              font-weight: 600;
+              text-decoration: none;
+              cursor: pointer;
+              transition: var(--transition-smooth);
+            }
+
+            .modal-summary-link svg {
+              transition: transform 0.25s ease;
+            }
+
+            .modal-summary-link:hover {
+              box-shadow: var(--shadow-hover);
+              transform: translateY(-1px);
+            }
+
+            .modal-summary-link:hover svg:last-child {
+              transform: translateX(3px);
+            }
+
+            .modal-close {
+              position: absolute;
+              top: 16px;
+              right: 16px;
+              width: 34px;
+              height: 34px;
+              border-radius: 10px;
+              border: 1px solid var(--border);
+              background: #fff;
+              color: var(--text-muted);
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: var(--transition-smooth);
+            }
+
+            .modal-close:hover {
+              border-color: var(--border-hover);
+              color: var(--text-main);
+              background: var(--bg-base);
+            }
+
+            .modal-body {
+              padding: 18px 24px 24px;
+              overflow-y: auto;
+            }
+
+            /* แนวทางการพัฒนา group (จัดกลุ่มโครงการตามแนวทาง ก่อนไปรายโครงการ) */
+            .mp-group {
+              margin-bottom: 22px;
+            }
+
+            .mp-group:last-child {
+              margin-bottom: 0;
+            }
+
+            .mp-group-head {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 11px 14px;
+              border-radius: 12px;
+              margin-bottom: 12px;
+              background: #f8fafc;
+              border: 1px solid var(--border);
+              border-left: 4px solid var(--text-faint);
+            }
+
+            .mp-group-badge {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+              min-width: 26px;
+              height: 26px;
+              padding: 0 8px;
+              border-radius: 8px;
+              font-size: 12px;
+              font-weight: 700;
+              color: #fff;
+            }
+
+            .mp-group-name {
+              flex: 1;
+              min-width: 0;
+              font-size: 13.5px;
+              font-weight: 600;
+              color: var(--text-main);
+              line-height: 1.4;
+            }
+
+            .mp-group-stat {
+              flex-shrink: 0;
+              text-align: right;
+              font-size: 12px;
+              color: var(--text-muted);
+            }
+
+            .mp-group-stat b {
+              font-family: 'JetBrains Mono', monospace;
+              font-weight: 700;
+              color: var(--text-main);
+            }
+
+            .mp-group.is-zero .mp-group-head {
+              opacity: 0.45;
+            }
+
+            .mp-card {
+              border: 1px solid var(--border);
+              border-radius: 14px;
+              padding: 16px 18px;
+              margin-bottom: 14px;
+              background: #fff;
+            }
+
+            .mp-card:last-child {
+              margin-bottom: 0;
+            }
+
+            /* Clickable project card → opens the จ.1-1 project brief */
+            a.mp-card {
+              display: block;
+              text-decoration: none;
+              color: inherit;
+              cursor: pointer;
+            }
+
+            a.mp-card:hover {
+              border-color: var(--border-hover);
+              box-shadow: var(--shadow-hover);
+              transform: translateY(-2px);
+            }
+
+            .mp-brief-hint {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              margin-top: 12px;
+              padding-top: 12px;
+              border-top: 1px dashed var(--border);
+              font-size: 12px;
+              font-weight: 600;
+            }
+
+            .mp-brief-hint svg {
+              transition: transform 0.25s ease;
+            }
+
+            a.mp-card:hover .mp-brief-hint svg {
+              transform: translateX(3px);
+            }
+
+            .mp-top {
+              display: flex;
+              align-items: flex-start;
+              gap: 14px;
+            }
+
+            .mp-name {
+              font-size: 14.5px;
+              font-weight: 600;
+              color: var(--text-main);
+              line-height: 1.4;
+            }
+
+            .mp-meta {
+              font-size: 12.5px;
+              color: var(--text-muted);
+              margin-top: 4px;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 6px 14px;
+            }
+
+            .mp-budget {
+              text-align: right;
+              flex-shrink: 0;
+            }
+
+            .mp-budget-val {
+              font-size: 16px;
+              font-weight: 700;
+              font-family: 'JetBrains Mono', monospace;
+            }
+
+            .mp-budget-lbl {
+              font-size: 11px;
+              color: var(--text-faint);
+            }
+
+            .mp-acts {
+              margin-top: 12px;
+              border-top: 1px dashed var(--border);
+              padding-top: 12px;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+
+            .mp-act {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              font-size: 12.5px;
+            }
+
+            .mp-act-dot {
+              width: 7px;
+              height: 7px;
+              border-radius: 50%;
+              flex-shrink: 0;
+              background: var(--text-faint);
+            }
+
+            .mp-act-name {
+              flex: 1;
+              min-width: 0;
+              color: var(--text-main);
+            }
+
+            .mp-act-area {
+              color: var(--text-muted);
+              font-size: 11.5px;
+              white-space: nowrap;
+            }
+
+            .mp-act-budget {
+              font-family: 'JetBrains Mono', monospace;
+              font-weight: 600;
+              color: var(--text-main);
+              flex-shrink: 0;
+              white-space: nowrap;
+            }
+
+            .mp-act.is-zero,
+            .mp-card.is-zero {
+              opacity: 0.4;
+            }
+
+            @media (max-width: 560px) {
+              .mp-top {
+                flex-direction: column;
+              }
+
+              .mp-budget {
+                text-align: left;
+              }
+            }
+          </style>
+
+          <div class="bg-glow-1"></div>
+          <div class="bg-glow-2"></div>
+
+          <div class="dashboard-container">
+            <!-- Header -->
+            <header class="header">
+              <div class="logo-section">
+                <div class="logo-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="M18 17V9" />
+                    <path d="M13 17V5" />
+                    <path d="M8 17v-3" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 class="logo-title">Phetchabun Project Dashboard</h1>
+                  <span class="logo-subtitle">ภาพรวมข้อมูลโครงการ จังหวัดเพชรบูรณ์ 2571-2575</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="live-badge">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  ข้อมูลจริง · {{ number_format($projects->count()) }} โครงการ
+                </span>
+                <a href="{{ route('phy70.linkage') }}" class="btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                  </svg>
+                  การเชื่อมโยง
+                </a>
+                {{-- เมนูประเมินคุณภาพถูกปิดไว้ชั่วคราว
+                <a href="{{ route('phy70.scorecard') }}" class="btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                  </svg>
+                  ประเมินคุณภาพ
+                </a>
+                --}}
+                <a href="{{ route('phy70.index') }}" class="btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  กลับหน้าหลัก
+                </a>
+              </div>
+            </header>
+
+            <h2 class="page-title">แดชบอร์ดสรุปข้อมูลโครงการ</h2>
+            <p class="page-desc">ภาพรวมเชิงวิเคราะห์ของโครงการและกิจกรรมภายใต้แผนพัฒนาจังหวัด — สรุปงบประมาณ
+              ประเด็นการพัฒนา
+              พื้นที่และกลุ่มเป้าหมาย</p>
+
+            @if($projects->isEmpty())
+            <!-- No proposals in the database yet -->
+            <div class="glass-card">
+              <div class="empty-state">
+                <div class="empty-icon" style="width: 64px; height: 64px; border-radius: 18px;">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="M18 17V9" />
+                    <path d="M13 17V5" />
+                    <path d="M8 17v-3" />
+                  </svg>
+                </div>
+                <div class="empty-title" style="font-size: 18px;">ยังไม่มีข้อมูลโครงการ</div>
+                <div class="empty-desc">ยังไม่มีข้อเสนอโครงการในระบบ เมื่อมีการบันทึกข้อเสนอโครงการแล้ว
+                  แดชบอร์ดจะแสดงสรุปงบประมาณ ประเด็นการพัฒนา พื้นที่ และกลุ่มเป้าหมายโดยอัตโนมัติ</div>
+                <a href="{{ route('phy70.proposal.create') }}" class="btn-secondary" style="margin-top: 6px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  เพิ่มข้อเสนอโครงการ
+                </a>
+              </div>
             </div>
-            <div style="min-width: 0;">
-              <div class="issue-name">{{ $issue }}</div>
-              <div class="issue-count"><span class="js-issue-count">{{ $issueCounts[$issue] ?? 0 }}</span> โครงการ</div>
+            @else
+
+            <!-- Year selector (ภาพรวม + รายปี) -->
+            <div class="year-selector" id="yearSelector">
+              <button type="button" class="year-btn active" data-scope="overview">ภาพรวม<small>ทุกปี</small></button>
+              @foreach($years as $y)
+              <button type="button" class="year-btn" data-scope="{{ $y }}">ปี {{ $y }}</button>
+              @endforeach
             </div>
+            <div class="scope-note" id="scopeNote" style="display: none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span>กำลังแสดงเฉพาะงบประมาณของ <b id="scopeNoteYear"></b> — รายการที่ไม่มีงบในปีนี้จะถูกจางลง</span>
+            </div>
+
+            <!-- KPI cards -->
+            <div class="kpi-grid">
+              <div class="glass-card kpi-card">
+                <div class="kpi-head">
+                  <div class="kpi-icon" style="background: rgba(99,102,241,0.12);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </div>
+                  <span class="kpi-label">จำนวนโครงการทั้งหมด</span>
+                </div>
+                <div class="kpi-value"><span id="kpi-projects">{{ number_format($kpi['projects']) }}</span><span
+                    class="kpi-unit">โครงการ</span></div>
+              </div>
+
+              <div class="glass-card kpi-card">
+                <div class="kpi-head">
+                  <div class="kpi-icon" style="background: rgba(8,145,178,0.12);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                  </div>
+                  <span class="kpi-label">จำนวนกิจกรรมทั้งหมด</span>
+                </div>
+                <div class="kpi-value"><span id="kpi-activities">{{ number_format($kpi['activities']) }}</span><span
+                    class="kpi-unit">กิจกรรม</span></div>
+              </div>
+
+              <div class="glass-card kpi-card">
+                <div class="kpi-head">
+                  <div class="kpi-icon" style="background: rgba(5,150,105,0.12);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2">
+                      <line x1="12" y1="1" x2="12" y2="23" />
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                  </div>
+                  <span class="kpi-label">งบประมาณรวมทั้งหมด</span>
+                </div>
+                @php
+                $budgetVal = $kpi['total_budget'];
+                $budgetDisplay = $budgetVal > 1000000 ? number_format($budgetVal / 1000000, 2) :
+                number_format($budgetVal);
+                $budgetUnit = $budgetVal > 1000000 ? 'ล้านบาท' : 'บาท';
+                @endphp
+                <div class="kpi-value"><span id="kpi-total_budget">{{ $budgetDisplay }}</span><span
+                    id="kpi-total_budget-unit" class="kpi-unit">{{ $budgetUnit }}</span></div>
+              </div>
+
+              <div class="glass-card kpi-card">
+                <div class="kpi-head">
+                  <div class="kpi-icon" style="background: rgba(217,119,6,0.12);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+                      <path d="M3 21h18" />
+                      <path d="M5 21V7l8-4v18" />
+                      <path d="M19 21V11l-6-4" />
+                    </svg>
+                  </div>
+                  <span class="kpi-label">หน่วยงานดำเนินการ</span>
+                </div>
+                <div class="kpi-value"><span id="kpi-agencies">{{ number_format($kpi['agencies']) }}</span><span
+                    class="kpi-unit">หน่วยงาน</span></div>
+              </div>
+
+              <div class="glass-card kpi-card">
+                <div class="kpi-head">
+                  <div class="kpi-icon" style="background: rgba(168,85,247,0.12);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2">
+                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <span class="kpi-label">พื้นที่เป้าหมาย</span>
+                </div>
+                <div class="kpi-value"><span id="kpi-target_areas">{{ number_format($kpi['target_areas']) }}</span><span
+                    class="kpi-unit">ตำบล</span></div>
+              </div>
+
+              <div class="glass-card kpi-card">
+                <div class="kpi-head">
+                  <div class="kpi-icon" style="background: rgba(236,72,153,0.12);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    </svg>
+                  </div>
+                  <span class="kpi-label">งบประมาณเฉลี่ย/โครงการ</span>
+                </div>
+                @php
+                $avgBudgetVal = $kpi['avg_budget'];
+                $avgBudgetDisplay = $avgBudgetVal > 1000000 ? number_format($avgBudgetVal / 1000000, 2) :
+                number_format($avgBudgetVal);
+                $avgBudgetUnit = $avgBudgetVal > 1000000 ? 'ล้านบาท' : 'บาท';
+                @endphp
+                <div class="kpi-value"><span id="kpi-avg_budget">{{ $avgBudgetDisplay }}</span><span
+                    id="kpi-avg_budget-unit" class="kpi-unit">{{ $avgBudgetUnit }}</span></div>
+              </div>
+            </div>
+
+            <!-- Issue cards (ประเด็นการพัฒนา — icon + สีต่อประเด็น) -->
+            <div class="glass-card section-block">
+              <h3 class="section-title" style="color: var(--primary);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">{!!
+                  $svgIcons['flag'] !!}</svg>
+                ประเด็นการพัฒนาของจังหวัด
+              </h3>
+              <p class="section-sub">งบประมาณและจำนวนโครงการแยกตามประเด็นการพัฒนา — แต่ละประเด็นมีสีและไอคอนกำกับ</p>
+              <div class="issue-grid">
+                @forelse(collect($budgetByIssue)->sortKeys() as $issue => $budget)
+                @php $m = $issueMeta[$issue] ?? $issueDefault; @endphp
+                <div class="issue-card" data-issue="{{ $issue }}" role="button" tabindex="0"
+                  aria-label="ดูรายละเอียดรายโครงการของประเด็น {{ $issue }}">
+                  <div class="issue-accent" style="background: {{ $m['color'] }};"></div>
+                  <div class="issue-top">
+                    <div class="issue-icon" style="background: {{ $m['bg'] }};">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ $m['color'] }}"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons[$m['icon']]
+                        !!}</svg>
+                    </div>
+                    <div style="min-width: 0;">
+                      <div class="issue-name">{{ $issue }}</div>
+                      <div class="issue-count"><span class="js-issue-count">{{ $issueCounts[$issue] ?? 0 }}</span>
+                        โครงการ</div>
+                    </div>
+                  </div>
+                  <div class="issue-budget" style="color: {{ $m['color'] }};"><span class="js-issue-budget">{{
+                      number_format($budget) }}</span><small>บาท</small>
+                  </div>
+                  <div class="issue-bar">
+                    <div class="issue-bar-fill js-issue-bar"
+                      style="width: {{ round($budget / $maxIssueBudget * 100) }}%; background: {{ $m['color'] }};">
+                    </div>
+                  </div>
+                  <div class="issue-drill" style="color: {{ $m['color'] }};">
+                    คลิกเพื่อดูรายโครงการ
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </div>
+                </div>
+                @empty
+                <div class="empty-state compact">
+                  <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!!
+                      $svgIcons['flag'] !!}</svg></div>
+                  <div class="empty-title">ยังไม่มีข้อมูลประเด็นการพัฒนา</div>
+                  <div class="empty-desc">ยังไม่มีข้อเสนอที่ระบุประเด็นการพัฒนาของจังหวัด</div>
+                </div>
+                @endforelse
+              </div>
+            </div>
+
+            <!-- Budget by fiscal year (stacked by issue) — overview only -->
+            <div class="glass-card section-block overview-only" id="yearlyBudgetSection">
+              <h3 class="section-title" style="color: var(--primary);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="20" x2="12" y2="10" />
+                  <line x1="18" y1="20" x2="18" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="16" />
+                </svg>
+                งบประมาณรายปีงบประมาณ (2571–2575)
+              </h3>
+              <p class="section-sub">การกระจายงบประมาณในแต่ละปีงบ ซ้อนสีตามประเด็นการพัฒนา —
+                คลิกที่ปุ่มปีด้านบนเพื่อเจาะดูข้อมูลเฉพาะปีนั้นทั้งแดชบอร์ด</p>
+              @if($budgetByIssue->sum() <= 0) <div class="empty-state compact">
+                <div class="empty-title">ยังไม่มีข้อมูลงบประมาณรายปี</div>
+                <div class="empty-desc">ยังไม่มีโครงการที่ระบุการแบ่งงบประมาณรายปี</div>
+            </div>
+            @else
+            <div class="chart-canvas-wrap" style="height: 340px;"><canvas id="chartYearly"></canvas></div>
+            @endif
           </div>
-          <div class="issue-budget" style="color: {{ $m['color'] }};"><span class="js-issue-budget">{{
-            number_format($budget) }}</span><small>บาท</small>
+
+          <!-- Charts row: guideline + agency -->
+          <div class="charts-grid">
+            <div class="glass-card chart-card">
+              <h3 class="section-title" style="color: var(--secondary);">สัดส่วนงบประมาณตามประเด็นการพัฒนา</h3>
+              @if($budgetByIssue->sum() <= 0) <div class="empty-state compact">
+                <div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามประเด็น</div>
+                <div class="empty-desc">ยังไม่มีโครงการที่ระบุประเด็นการพัฒนาและงบประมาณ</div>
+            </div>
+            @else
+            <div class="chart-canvas-wrap"><canvas id="chartIssue"></canvas></div>
+            @endif
           </div>
-          <div class="issue-bar">
-            <div class="issue-bar-fill js-issue-bar"
-              style="width: {{ round($budget / $maxIssueBudget * 100) }}%; background: {{ $m['color'] }};"></div>
+          <div class="glass-card chart-card">
+            <h3 class="section-title" style="color: var(--success);">งบประมาณตามหน่วยงานดำเนินการ</h3>
+            @if($budgetByAgency->sum() <= 0) <div class="empty-state compact">
+              <div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามหน่วยงาน</div>
+              <div class="empty-desc">ยังไม่มีโครงการที่ระบุหน่วยงานและงบประมาณ</div>
           </div>
-          <div class="issue-drill" style="color: {{ $m['color'] }};">
-            คลิกเพื่อดูรายโครงการ
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </div>
-        </div>
-        @empty
-        <div class="empty-state compact">
-          <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['flag'] !!}</svg></div>
-          <div class="empty-title">ยังไม่มีข้อมูลประเด็นการพัฒนา</div>
-          <div class="empty-desc">ยังไม่มีข้อเสนอที่ระบุประเด็นการพัฒนาของจังหวัด</div>
-        </div>
-        @endforelse
-      </div>
-    </div>
-
-    <!-- Budget by fiscal year (stacked by issue) — overview only -->
-    <div class="glass-card section-block overview-only" id="yearlyBudgetSection">
-      <h3 class="section-title" style="color: var(--primary);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="20" x2="12" y2="10" />
-          <line x1="18" y1="20" x2="18" y2="4" />
-          <line x1="6" y1="20" x2="6" y2="16" />
-        </svg>
-        งบประมาณรายปีงบประมาณ (2571–2575)
-      </h3>
-      <p class="section-sub">การกระจายงบประมาณในแต่ละปีงบ ซ้อนสีตามประเด็นการพัฒนา —
-        คลิกที่ปุ่มปีด้านบนเพื่อเจาะดูข้อมูลเฉพาะปีนั้นทั้งแดชบอร์ด</p>
-      @if($budgetByIssue->sum() <= 0)
-      <div class="empty-state compact">
-        <div class="empty-title">ยังไม่มีข้อมูลงบประมาณรายปี</div>
-        <div class="empty-desc">ยังไม่มีโครงการที่ระบุการแบ่งงบประมาณรายปี</div>
-      </div>
-      @else
-      <div class="chart-canvas-wrap" style="height: 340px;"><canvas id="chartYearly"></canvas></div>
-      @endif
-    </div>
-
-    <!-- Charts row: guideline + agency -->
-    <div class="charts-grid">
-      <div class="glass-card chart-card">
-        <h3 class="section-title" style="color: var(--secondary);">สัดส่วนงบประมาณตามประเด็นการพัฒนา</h3>
-        @if($budgetByIssue->sum() <= 0) <div class="empty-state compact">
-          <div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามประเด็น</div>
-          <div class="empty-desc">ยังไม่มีโครงการที่ระบุประเด็นการพัฒนาและงบประมาณ</div>
-      </div>
-      @else
-      <div class="chart-canvas-wrap"><canvas id="chartIssue"></canvas></div>
-      @endif
-    </div>
-    <div class="glass-card chart-card">
-      <h3 class="section-title" style="color: var(--success);">งบประมาณตามหน่วยงานดำเนินการ</h3>
-      @if($budgetByAgency->sum() <= 0) <div class="empty-state compact">
-        <div class="empty-title">ยังไม่มีข้อมูลงบประมาณตามหน่วยงาน</div>
-        <div class="empty-desc">ยังไม่มีโครงการที่ระบุหน่วยงานและงบประมาณ</div>
-    </div>
-    @else
-    <div class="chart-canvas-wrap"><canvas id="chartAgency"></canvas></div>
-    @endif
-  </div>
-  </div>
-
-  <!-- Budget proportion by development guideline (สัดส่วนงบประมาณตามแนวทางการพัฒนา) -->
-  <div class="glass-card section-block">
-    <h3 class="section-title" style="color: var(--primary);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-      สัดส่วนงบประมาณตามแนวทางการพัฒนา
-    </h3>
-    <p class="section-sub">สัดส่วนการจัดสรรงบประมาณของแต่ละแนวทางการพัฒนา —
-      ปรับตาม<b id="guideScopeLabel">ภาพรวมทุกปี</b> ที่เลือกจากปุ่มปีด้านบน</p>
-    @if($details->pluck('guideline')->filter()->isEmpty())
-    <div class="empty-state compact">
-      <div class="empty-title">ยังไม่มีข้อมูลแนวทางการพัฒนา</div>
-      <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุแนวทางการพัฒนาและงบประมาณ</div>
-    </div>
-    @else
-    <div class="guideline-layout">
-      <div class="chart-canvas-wrap" style="height: 320px;"><canvas id="chartGuideline"></canvas></div>
-      <div id="guidelineList" class="guideline-list"></div>
-    </div>
-    @endif
-  </div>
-
-  <!-- Layer mapping (ข้อมูลพื้นที่) -->
-  <div class="glass-card section-block">
-    <h3 class="section-title" style="color: var(--warning);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['layers'] !!}</svg>
-      ข้อมูลพื้นที่ — Layer Mapping
-    </h3>
-    <p class="section-sub">แผนที่จังหวัดเพชรบูรณ์ ระดับตำบล — เลือกมุมมอง (Layer) ที่มุมขวาบนของแผนที่: <b>ดูเป็นตำบล /
-        ประเด็น / แนวทาง</b> · ขนาดวงกลม = งบประมาณ · คลิกหมุดเพื่อดูรายละเอียดแยกตามมุมมอง</p>
-
-    <div class="area-map-wrap">
-      <div id="areaMap"></div>
-      <div class="map-legend" id="mapLegend">
-        <div class="map-legend-title">ขนาดวงกลม = งบประมาณ</div>
-        <div class="map-legend-item"><span class="map-legend-dot" style="width:10px;height:10px;"></span> งบน้อย</div>
-        <div class="map-legend-item"><span class="map-legend-dot" style="width:18px;height:18px;"></span> ปานกลาง</div>
-        <div class="map-legend-item"><span class="map-legend-dot" style="width:26px;height:26px;"></span> งบสูง</div>
-      </div>
-    </div>
-
-    <div class="layer-map">
-      @forelse($budgetByArea as $area => $budget)
-      @php
-      $ci = $loop->index % count($areaPalette);
-      $color = $areaPalette[$ci];
-      $acts = $activitiesByArea[$area] ?? 0;
-      $pct = round($budget / $maxAreaBudget * 100);
-      @endphp
-      <div class="layer-row" data-area="{{ $area }}">
-        <div class="layer-fill js-area-fill" style="width: {{ $pct }}%; background: {{ $color }};"></div>
-        <div class="layer-edge" style="background: {{ $color }};"></div>
-        <div class="layer-rank" style="background: {{ $color }};">{{ $loop->iteration }}</div>
-        <div class="layer-pin" style="background: {{ $color }}1f;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ $color }}" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['pin'] !!}</svg>
-        </div>
-        <div class="layer-info">
-          <div class="layer-name">{{ $area }}</div>
-          <div class="layer-sub">สัดส่วนงบประมาณ <span class="js-area-pct">{{ $pct }}</span>% ของพื้นที่สูงสุด</div>
-        </div>
-        <div class="layer-stats">
-          <div class="layer-stat">
-            <div class="layer-stat-value js-area-acts">{{ number_format($acts) }}</div>
-            <div class="layer-stat-label">กิจกรรม</div>
-          </div>
-          <div class="layer-stat">
-            <div class="layer-stat-value js-area-budget" style="color: {{ $color }};">{{ number_format($budget) }}</div>
-            <div class="layer-stat-label">บาท</div>
-          </div>
-        </div>
-      </div>
-      @empty
-      <div class="empty-state compact">
-        <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['pin'] !!}</svg></div>
-        <div class="empty-title">ยังไม่มีข้อมูลพื้นที่เป้าหมาย</div>
-        <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุพื้นที่เป้าหมายและงบประมาณ</div>
-      </div>
-      @endforelse
-    </div>
-  </div>
-
-  <!-- Charts row: target group + top projects -->
-  <div class="charts-grid">
-    <div class="glass-card chart-card">
-      <h3 class="section-title" style="color: #db2777;">งบประมาณตามกลุ่มเป้าหมาย</h3>
-      @if($budgetByTargetGroup->sum() <= 0) <div class="empty-state compact">
-        <div class="empty-title">ยังไม่มีข้อมูลกลุ่มเป้าหมาย</div>
-        <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุกลุ่มเป้าหมายและงบประมาณ</div>
-    </div>
-    @else
-    <div class="chart-canvas-wrap"><canvas id="chartGroup"></canvas></div>
-    @endif
-  </div>
-  <div class="glass-card chart-card">
-    <h3 class="section-title" style="color: #9333ea;">5 โครงการงบประมาณสูงสุด</h3>
-    <div id="topProjects" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
-      @forelse($topProjects as $i => $p)
-      <div
-        style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px;">
-        <span class="rank-badge">{{ $i + 1 }}</span>
-        <div style="flex: 1; min-width: 0;">
-          <div class="cell-clip" style="max-width: 100%; font-weight: 600; font-size: 13.5px;"
-            title="{{ $p['project_name'] }}">{{ $p['project_name'] }}</div>
-          <div style="font-size: 12px; color: var(--text-muted);">{{ $p['operating_agency'] }}</div>
-        </div>
-        <div style="text-align: right; flex-shrink: 0;">
-          <div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text-main);">{{
-            number_format($p['total_budget']) }}</div>
-          <div style="font-size: 11px; color: var(--text-faint);">บาท</div>
-        </div>
-      </div>
-      @empty
-      <div class="empty-state compact">
-        <div class="empty-title">ยังไม่มีข้อมูลโครงการ</div>
-      </div>
-      @endforelse
-    </div>
-  </div>
-  </div>
-
-  <!-- Project table -->
-  <div class="glass-card section-block">
-    <h3 class="section-title" style="color: var(--secondary);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M3 9h18" />
-        <path d="M9 21V9" />
-      </svg>
-      ตารางข้อมูลโครงการ (project)
-    </h3>
-    <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>รหัสโครงการ</th>
-            <th>ชื่อโครงการ</th>
-            <th>ประเด็นการพัฒนาของจังหวัด</th>
-            <th>หลักการและเหตุผล</th>
-            <th>วัตถุประสงค์ของโครงการ</th>
-            <th>หน่วยงานดำเนินการ</th>
-            <th>ผลผลิต</th>
-            <th>ผลลัพธ์</th>
-            <th style="text-align: right;">งบประมาณรวม (บาท)</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse($projects as $p)
-          @php $im = $issueMeta[$p['province_issue']] ?? $issueDefault; @endphp
-          <tr data-pindex="{{ $loop->index }}">
-            <td class="code-cell">{{ $p['project_id'] }}</td>
-            <td style="font-weight: 600; white-space: normal; min-width: 220px;">{{ $p['project_name'] }}</td>
-            <td><span class="chip" style="background: {{ $im['bg'] }}; color: {{ $im['color'] }};"><span
-                  class="chip-dot" style="background: {{ $im['color'] }};"></span>{{ $p['province_issue'] }}</span></td>
-            <td class="cell-clip" title="{{ $p['rationale'] }}">{{ $p['rationale'] }}</td>
-            <td class="cell-clip" title="{{ $p['objective'] }}">{{ $p['objective'] }}</td>
-            <td class="cell-clip" title="{{ $p['operating_agency'] }}">{{ $p['operating_agency'] }}</td>
-            <td class="cell-clip" title="{{ $p['output'] }}">{{ $p['output'] }}</td>
-            <td class="cell-clip" title="{{ $p['outcome'] }}">{{ $p['outcome'] }}</td>
-            <td class="num-cell js-pbudget">{{ number_format($p['total_budget']) }}</td>
-          </tr>
-          @empty
-          <tr>
-            <td colspan="9" class="empty-cell">ยังไม่มีข้อมูลโครงการ</td>
-          </tr>
-          @endforelse
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="8" style="text-align: right; font-weight: 600; color: var(--text-muted);">รวมงบประมาณทั้งสิ้น
-            </td>
-            <td class="num-cell" id="projTableTotal" style="color: var(--success); font-size: 15px;">{{
-              number_format($kpi['total_budget']) }}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- Project detail table -->
-  <div class="glass-card section-block">
-    <h3 class="section-title" style="color: var(--primary);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-      </svg>
-      ตารางรายละเอียดกิจกรรม (project_detail)
-    </h3>
-    <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>รหัสกิจกรรม (PK)</th>
-            <th>รหัสโครงการ (FK)</th>
-            <th>แนวทางการพัฒนา</th>
-            <th>พื้นที่เป้าหมาย</th>
-            <th>กลุ่มเป้าหมาย</th>
-            <th>กิจกรรม</th>
-            <th style="text-align: right;">งบประมาณ (บาท)</th>
-            <th>ผู้รับผิดชอบ</th>
-            <th>หน่วยงานรับผิดชอบ</th>
-            <th>หน่วยงานที่เกี่ยวข้อง</th>
-          </tr>
-        </thead>
-        <tbody>
-          @if($details->isEmpty())
-          <tr>
-            <td colspan="10" class="empty-cell">ยังไม่มีข้อมูลกิจกรรม</td>
-          </tr>
+          @else
+          <div class="chart-canvas-wrap"><canvas id="chartAgency"></canvas></div>
           @endif
-          @php $di = 0; @endphp
-          @foreach($projects as $p)
-          @foreach($p['details'] as $d)
-          <tr data-dindex="{{ $di }}">
-            <td class="code-cell">{{ $d['activity_id'] }}</td>
-            <td class="code-cell" style="color: var(--text-muted);">{{ $p['project_id'] }}</td>
-            <td><span class="chip chip-cyan">{{ $d['guideline'] }}</span></td>
-            <td><span class="chip chip-emerald">{{ $d['target_area'] }}</span></td>
-            <td>{{ $d['target_group'] }}</td>
-            <td style="white-space: normal; min-width: 220px;">{{ $d['activity'] }}</td>
-            <td class="num-cell js-dbudget">{{ number_format($d['budget']) }}</td>
-            <td>{{ $d['responsible_person'] }}</td>
-            <td class="cell-clip" title="{{ $d['responsible_agency'] }}">{{ $d['responsible_agency'] }}</td>
-            <td class="cell-clip" title="{{ $d['related_agency'] }}">{{ $d['related_agency'] }}</td>
-          </tr>
-          @php $di++; @endphp
-          @endforeach
-          @endforeach
-        </tbody>
-      </table>
-    </div>
-  </div>
+          </div>
+          </div>
 
-  <!-- Issue drilldown modal (รายละเอียดรายโครงการต่อประเด็น) -->
-  <div class="modal-overlay" id="issueModal" role="dialog" aria-modal="true" aria-labelledby="issueModalTitle">
-    <div class="modal-panel">
-      <div class="modal-head">
-        <div class="modal-head-accent" id="issueModalAccent"></div>
-        <div class="modal-head-icon" id="issueModalIcon"></div>
-        <div style="min-width: 0; flex: 1;">
-          <div class="modal-title" id="issueModalTitle">—</div>
-          <div class="modal-sub" id="issueModalSub"></div>
-          <a id="issueModalSummary" class="modal-summary-link" href="#" target="_blank" rel="noopener">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
-            </svg>
-            ดูรายละเอียด (แบบ จ.1)
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </a>
-        </div>
-        <button type="button" class="modal-close" id="issueModalClose" aria-label="ปิด">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body" id="issueModalBody"></div>
-    </div>
-  </div>
-  @endif
-  </div>
+          <!-- Layer mapping (ข้อมูลพื้นที่) -->
+          <div class="glass-card section-block">
+            <h3 class="section-title" style="color: var(--warning);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['layers'] !!}</svg>
+              ข้อมูลพื้นที่ — Layer Mapping
+            </h3>
+            <p class="section-sub">แผนที่จังหวัดเพชรบูรณ์ ระดับตำบล — เลือกมุมมอง (Layer) ที่มุมขวาบนของแผนที่:
+              <b>ดูเป็นตำบล /
+                ประเด็น / แนวทาง</b> · ขนาดวงกลม = งบประมาณ · คลิกหมุดเพื่อดูรายละเอียดแยกตามมุมมอง</p>
 
-  @unless($projects->isEmpty())
-  <script>
-    // ---- Precomputed per-scope payloads (ภาพรวม + รายปี) ----
+            <div class="area-map-wrap">
+              <div id="areaMap"></div>
+              <div class="map-legend" id="mapLegend">
+                <div class="map-legend-title">ขนาดวงกลม = งบประมาณ</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="width:10px;height:10px;"></span> งบน้อย
+                </div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="width:18px;height:18px;"></span>
+                  ปานกลาง</div>
+                <div class="map-legend-item"><span class="map-legend-dot" style="width:26px;height:26px;"></span> งบสูง
+                </div>
+              </div>
+            </div>
+
+            <div class="layer-map">
+              @forelse($budgetByArea as $area => $budget)
+              @php
+              $ci = $loop->index % count($areaPalette);
+              $color = $areaPalette[$ci];
+              $acts = $activitiesByArea[$area] ?? 0;
+              $pct = round($budget / $maxAreaBudget * 100);
+              @endphp
+              <div class="layer-row" data-area="{{ $area }}">
+                <div class="layer-fill js-area-fill" style="width: {{ $pct }}%; background: {{ $color }};"></div>
+                <div class="layer-edge" style="background: {{ $color }};"></div>
+                <div class="layer-rank" style="background: {{ $color }};">{{ $loop->iteration }}</div>
+                <div class="layer-pin" style="background: {{ $color }}1f;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ $color }}" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">{!! $svgIcons['pin'] !!}</svg>
+                </div>
+                <div class="layer-info">
+                  <div class="layer-name">{{ $area }}</div>
+                  <div class="layer-sub">สัดส่วนงบประมาณ <span class="js-area-pct">{{ $pct }}</span>% ของพื้นที่สูงสุด
+                  </div>
+                </div>
+                <div class="layer-stats">
+                  <div class="layer-stat">
+                    <div class="layer-stat-value js-area-acts">{{ number_format($acts) }}</div>
+                    <div class="layer-stat-label">กิจกรรม</div>
+                  </div>
+                  <div class="layer-stat">
+                    <div class="layer-stat-value js-area-budget" style="color: {{ $color }};">{{ number_format($budget)
+                      }}</div>
+                    <div class="layer-stat-label">บาท</div>
+                  </div>
+                </div>
+              </div>
+              @empty
+              <div class="empty-state compact">
+                <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!!
+                    $svgIcons['pin'] !!}</svg></div>
+                <div class="empty-title">ยังไม่มีข้อมูลพื้นที่เป้าหมาย</div>
+                <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุพื้นที่เป้าหมายและงบประมาณ</div>
+              </div>
+              @endforelse
+            </div>
+          </div>
+
+          <!-- Charts row: target group + top projects -->
+          <div class="charts-grid">
+            <div class="glass-card chart-card">
+              <h3 class="section-title" style="color: #db2777;">งบประมาณตามกลุ่มเป้าหมาย</h3>
+              @if($budgetByTargetGroup->sum() <= 0) <div class="empty-state compact">
+                <div class="empty-title">ยังไม่มีข้อมูลกลุ่มเป้าหมาย</div>
+                <div class="empty-desc">ยังไม่มีกิจกรรมที่ระบุกลุ่มเป้าหมายและงบประมาณ</div>
+            </div>
+            @else
+            <div class="chart-canvas-wrap"><canvas id="chartGroup"></canvas></div>
+            @endif
+          </div>
+          <div class="glass-card chart-card">
+            <h3 class="section-title" style="color: #9333ea;">5 โครงการงบประมาณสูงสุด</h3>
+            <div id="topProjects" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+              @forelse($topProjects as $i => $p)
+              <div
+                style="display: flex; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px;">
+                <span class="rank-badge">{{ $i + 1 }}</span>
+                <div style="flex: 1; min-width: 0;">
+                  <div class="cell-clip" style="max-width: 100%; font-weight: 600; font-size: 13.5px;"
+                    title="{{ $p['project_name'] }}">{{ $p['project_name'] }}</div>
+                  <div style="font-size: 12px; color: var(--text-muted);">{{ $p['operating_agency'] }}</div>
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text-main);">{{
+                    number_format($p['total_budget']) }}</div>
+                  <div style="font-size: 11px; color: var(--text-faint);">บาท</div>
+                </div>
+              </div>
+              @empty
+              <div class="empty-state compact">
+                <div class="empty-title">ยังไม่มีข้อมูลโครงการ</div>
+              </div>
+              @endforelse
+            </div>
+          </div>
+          </div>
+
+          <!-- Project table -->
+          <div class="glass-card section-block">
+            <h3 class="section-title" style="color: var(--secondary);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M9 21V9" />
+              </svg>
+              ตารางข้อมูลโครงการ (project)
+            </h3>
+            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>รหัสโครงการ</th>
+                    <th>ชื่อโครงการ</th>
+                    <th>ประเด็นการพัฒนาของจังหวัด</th>
+                    <th>หลักการและเหตุผล</th>
+                    <th>วัตถุประสงค์ของโครงการ</th>
+                    <th>หน่วยงานดำเนินการ</th>
+                    <th>ผลผลิต</th>
+                    <th>ผลลัพธ์</th>
+                    <th style="text-align: right;">งบประมาณรวม (บาท)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @forelse($projects as $p)
+                  @php $im = $issueMeta[$p['province_issue']] ?? $issueDefault; @endphp
+                  <tr data-pindex="{{ $loop->index }}">
+                    <td class="code-cell">{{ $p['project_id'] }}</td>
+                    <td style="font-weight: 600; white-space: normal; min-width: 220px;">{{ $p['project_name'] }}</td>
+                    <td><span class="chip" style="background: {{ $im['bg'] }}; color: {{ $im['color'] }};"><span
+                          class="chip-dot" style="background: {{ $im['color'] }};"></span>{{ $p['province_issue']
+                        }}</span></td>
+                    <td class="cell-clip" title="{{ $p['rationale'] }}">{{ $p['rationale'] }}</td>
+                    <td class="cell-clip" title="{{ $p['objective'] }}">{{ $p['objective'] }}</td>
+                    <td class="cell-clip" title="{{ $p['operating_agency'] }}">{{ $p['operating_agency'] }}</td>
+                    <td class="cell-clip" title="{{ $p['output'] }}">{{ $p['output'] }}</td>
+                    <td class="cell-clip" title="{{ $p['outcome'] }}">{{ $p['outcome'] }}</td>
+                    <td class="num-cell js-pbudget">{{ number_format($p['total_budget']) }}</td>
+                  </tr>
+                  @empty
+                  <tr>
+                    <td colspan="9" class="empty-cell">ยังไม่มีข้อมูลโครงการ</td>
+                  </tr>
+                  @endforelse
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="8" style="text-align: right; font-weight: 600; color: var(--text-muted);">
+                      รวมงบประมาณทั้งสิ้น
+                    </td>
+                    <td class="num-cell" id="projTableTotal" style="color: var(--success); font-size: 15px;">{{
+                      number_format($kpi['total_budget']) }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Project detail table -->
+          <div class="glass-card section-block">
+            <h3 class="section-title" style="color: var(--primary);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+              ตารางรายละเอียดกิจกรรม (project_detail)
+            </h3>
+            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>รหัสกิจกรรม (PK)</th>
+                    <th>รหัสโครงการ (FK)</th>
+                    <th>แนวทางการพัฒนา</th>
+                    <th>พื้นที่เป้าหมาย</th>
+                    <th>กลุ่มเป้าหมาย</th>
+                    <th>กิจกรรม</th>
+                    <th style="text-align: right;">งบประมาณ (บาท)</th>
+                    <th>ผู้รับผิดชอบ</th>
+                    <th>หน่วยงานรับผิดชอบ</th>
+                    <th>หน่วยงานที่เกี่ยวข้อง</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if($details->isEmpty())
+                  <tr>
+                    <td colspan="10" class="empty-cell">ยังไม่มีข้อมูลกิจกรรม</td>
+                  </tr>
+                  @endif
+                  @php $di = 0; @endphp
+                  @foreach($projects as $p)
+                  @foreach($p['details'] as $d)
+                  <tr data-dindex="{{ $di }}">
+                    <td class="code-cell">{{ $d['activity_id'] }}</td>
+                    <td class="code-cell" style="color: var(--text-muted);">{{ $p['project_id'] }}</td>
+                    <td><span class="chip chip-cyan">{{ $d['guideline'] }}</span></td>
+                    <td><span class="chip chip-emerald">{{ $d['target_area'] }}</span></td>
+                    <td>{{ $d['target_group'] }}</td>
+                    <td style="white-space: normal; min-width: 220px;">{{ $d['activity'] }}</td>
+                    <td class="num-cell js-dbudget">{{ number_format($d['budget']) }}</td>
+                    <td>{{ $d['responsible_person'] }}</td>
+                    <td class="cell-clip" title="{{ $d['responsible_agency'] }}">{{ $d['responsible_agency'] }}</td>
+                    <td class="cell-clip" title="{{ $d['related_agency'] }}">{{ $d['related_agency'] }}</td>
+                  </tr>
+                  @php $di++; @endphp
+                  @endforeach
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Issue drilldown modal (รายละเอียดรายโครงการต่อประเด็น) -->
+          <div class="modal-overlay" id="issueModal" role="dialog" aria-modal="true" aria-labelledby="issueModalTitle">
+            <div class="modal-panel">
+              <div class="modal-head">
+                <div class="modal-head-accent" id="issueModalAccent"></div>
+                <div class="modal-head-icon" id="issueModalIcon"></div>
+                <div style="min-width: 0; flex: 1;">
+                  <div class="modal-title" id="issueModalTitle">—</div>
+                  <div class="modal-sub" id="issueModalSub"></div>
+                  <a id="issueModalSummary" class="modal-summary-link" href="#" target="_blank" rel="noopener">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M3 9h18" />
+                      <path d="M9 21V9" />
+                    </svg>
+                    ดูรายละเอียด (แบบ จ.1)
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </a>
+                </div>
+                <button type="button" class="modal-close" id="issueModalClose" aria-label="ปิด">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div class="modal-body" id="issueModalBody"></div>
+            </div>
+          </div>
+          @endif
+          </div>
+
+          @unless($projects->isEmpty())
+          <script>
+            // ---- Precomputed per-scope payloads (ภาพรวม + รายปี) ----
         const SCOPES = @json($scopes);
         const YEARS  = @json($years);
         const STACKED = { years: @json($years), series: @json($stackedSeries), totals: @json($stackedTotals) };
@@ -2349,52 +2319,6 @@
             });
         }
 
-        // Budget proportion by development guideline (doughnut) — reacts to selected year
-        let chartGuideline = null;
-        if (document.getElementById('chartGuideline')) {
-            chartGuideline = new Chart(document.getElementById('chartGuideline'), {
-                type: 'doughnut',
-                data: {
-                    labels: ov.guideline.labels,
-                    datasets: [{ data: ov.guideline.values, backgroundColor: ov.guideline.colors, borderColor: surfaceBorder, borderWidth: 3 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '58%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: {
-                            label: (ctx) => {
-                                const tot = ctx.dataset.data.reduce((s, v) => s + v, 0) || 1;
-                                return ' ' + ctx.label + ': ' + bahtFmt(ctx.raw) + ' บาท (' + Math.round(ctx.raw / tot * 100) + '%)';
-                            }
-                        } }
-                    }
-                }
-            });
-        }
-
-        // Guideline proportion list (bars beside the doughnut)
-        const guidelineListEl = document.getElementById('guidelineList');
-        function renderGuidelineList(items) {
-            if (!guidelineListEl) return;
-            if (!items || !items.length) {
-                guidelineListEl.innerHTML = '<div class="empty-state compact"><div class="empty-title">ไม่มีงบประมาณของแนวทางการพัฒนาในช่วงที่เลือก</div></div>';
-                return;
-            }
-            guidelineListEl.innerHTML = items.map(g =>
-                '<div class="gl-row' + (g.budget <= 0 ? ' is-zero' : '') + '">' +
-                '<div class="gl-top">' +
-                '<span class="gl-dot" style="background:' + g.color + ';"></span>' +
-                '<span class="gl-name" title="' + esc(g.name) + '">' + esc(g.name) + '</span>' +
-                '<span class="gl-pct" style="color:' + g.color + ';">' + g.pct + '%</span>' +
-                '</div>' +
-                '<div class="gl-bar"><div class="gl-bar-fill" style="width:' + g.pct + '%;background:' + g.color + ';"></div></div>' +
-                '<div class="gl-budget"><b>' + bahtFmt(g.budget) + '</b> บาท</div>' +
-                '</div>'
-            ).join('');
-        }
-        if (chartGuideline) renderGuidelineList(ov.guideline.items);
-
         // Budget by fiscal year (stacked by issue) — overview only, static
         if (document.getElementById('chartYearly')) {
             new Chart(document.getElementById('chartYearly'), {
@@ -2520,9 +2444,6 @@
             updateChart(chartIssue, s.issues.map(i => i.name), s.issues.map(i => i.budget), s.issues.map(i => i.color));
             updateChart(chartAgency, s.agency.labels, s.agency.values);
             updateChart(chartGroup, s.group.labels, s.group.values);
-            updateChart(chartGuideline, s.guideline.labels, s.guideline.values, s.guideline.colors);
-            renderGuidelineList(s.guideline.items);
-            setText('guideScopeLabel', isOverview ? 'ภาพรวมทุกปี' : ('ปี ' + key));
 
             // Map
             buildMapLayers(s.areaMap);
@@ -2578,17 +2499,14 @@
                 '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (SVG_ICONS[meta.icon] || SVG_ICONS.flag) + '</svg>';
             document.getElementById('issueModalTitle').textContent = name;
             const scopeLabel = currentScope === 'overview' ? 'ทุกปีงบประมาณ' : ('ปีงบประมาณ ' + currentScope);
-<<<<<<< HEAD
-=======
             // นับจำนวนแนวทางการพัฒนาที่มีงบในสโคปนี้ (เพื่อโชว์ในหัว modal)
             const guidelineCount = new Set(
                 rows.flatMap(r => (r.p.acts || [])
                     .filter(a => (dBud[a.dindex] != null ? dBud[a.dindex] : a.budget) > 0)
                     .map(a => (a.guideline && String(a.guideline).trim()) ? String(a.guideline).trim() : 'ไม่ระบุแนวทาง'))
             ).size;
->>>>>>> fe101d239c26a95801e34920ab8a67defdc5f8a3
             document.getElementById('issueModalSub').innerHTML =
-                '<b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
+                '<b>' + bahtFmt(guidelineCount) + '</b> แนวทาง · <b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
 
             // ปุ่ม "ดูรายละเอียด (แบบ จ.1)" → หน้าสรุปโครงการรายประเด็น
             const summaryLink = document.getElementById('issueModalSummary');
@@ -2598,9 +2516,6 @@
                 summaryLink.style.borderColor = meta.color;
             }
 
-<<<<<<< HEAD
-            // Body — การ์ดต่อโครงการ + รายการกิจกรรม
-=======
             // การ์ดรายโครงการ (พร้อมรายการกิจกรรม) — ใช้ซ้ำในแต่ละกลุ่มแนวทาง
             const projectCardHtml = ({ p, b, actsOverride }) => {
                 const acts = (actsOverride || p.acts || []).map(a => {
@@ -2634,43 +2549,10 @@
             };
 
             // Body — จัดกลุ่มโครงการตาม "แนวทางการพัฒนา" ก่อน แล้วค่อยแสดงรายโครงการในกลุ่ม
->>>>>>> fe101d239c26a95801e34920ab8a67defdc5f8a3
             const body = document.getElementById('issueModalBody');
             if (!rows.length) {
                 body.innerHTML = '<div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลโครงการในประเด็นนี้</div></div>';
             } else {
-<<<<<<< HEAD
-                body.innerHTML = rows.map(({ p, b }) => {
-                    const acts = (p.acts || []).map(a => {
-                        const ab = dBud[a.dindex] != null ? dBud[a.dindex] : a.budget;
-                        return '<div class="mp-act' + (ab <= 0 ? ' is-zero' : '') + '">' +
-                            '<span class="mp-act-dot" style="background:' + meta.color + ';"></span>' +
-                            '<span class="mp-act-name">' + esc(a.activity || a.guideline || 'กิจกรรม') + '</span>' +
-                            '<span class="mp-act-area">' + esc(a.target_area || '') + '</span>' +
-                            '<span class="mp-act-budget">' + bahtFmt(ab) + ' ฿</span></div>';
-                    }).join('');
-                    const href = p.db_id != null ? BRIEF_URL.replace('__ID__', encodeURIComponent(p.db_id)) : null;
-                    const hint = href
-                        ? '<div class="mp-brief-hint" style="color:' + meta.color + ';">ดูรายละเอียดโครงการ (แบบ จ.1-1)' +
-                          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>'
-                        : '';
-                    const open = href ? '<a class="mp-card' + (b <= 0 ? ' is-zero' : '') + '" href="' + href + '">' : '<div class="mp-card' + (b <= 0 ? ' is-zero' : '') + '">';
-                    const close = href ? '</a>' : '</div>';
-                    return open +
-                        '<div class="mp-top">' +
-                        '<div style="flex:1;min-width:0;">' +
-                        '<div class="mp-name">' + esc(p.name) + '</div>' +
-                        '<div class="mp-meta">' +
-                        '<span>รหัส: ' + esc(p.id) + '</span>' +
-                        '<span>หน่วยงาน: ' + esc(p.agency || '—') + '</span>' +
-                        (p.guideline ? '<span>แนวทาง: ' + esc(p.guideline) + '</span>' : '') +
-                        '</div></div>' +
-                        '<div class="mp-budget"><div class="mp-budget-val" style="color:' + meta.color + ';">' + bahtFmt(b) + '</div>' +
-                        '<div class="mp-budget-lbl">บาท</div></div></div>' +
-                        (acts ? '<div class="mp-acts">' + acts + '</div>' : '') +
-                        hint +
-                        close;
-=======
                 // จัดกลุ่มตาม "แนวทางของกิจกรรม" (activities.guideline) แทน development_guideline
                 // โครงการเดียวอาจอยู่ได้หลายแนวทาง → การ์ดแสดงเฉพาะกิจกรรม + งบของแนวทางนั้น
                 const groupMap = new Map();
@@ -2703,7 +2585,6 @@
                         '</div>';
                     const cards = projEntries.map(pe => projectCardHtml({ p: pe.p, b: pe.budget, actsOverride: pe.acts })).join('');
                     return '<div class="mp-group' + (g.budget <= 0 ? ' is-zero' : '') + '">' + head + cards + '</div>';
->>>>>>> fe101d239c26a95801e34920ab8a67defdc5f8a3
                 }).join('');
             }
 
@@ -2726,6 +2607,6 @@
         document.getElementById('issueModalClose').addEventListener('click', closeIssueModal);
         issueModal.addEventListener('click', (e) => { if (e.target === issueModal) closeIssueModal(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && issueModal.classList.contains('open')) closeIssueModal(); });
-  </script>
-  @endunless
+          </script>
+          @endunless
 </x-phy70::layouts.master>

@@ -379,8 +379,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
           <div class="form-group" x-show="formData.province_issue">
             <label class="form-label">แผนงานย่อยของประเด็น <span style="color: var(--danger);">*</span></label>
             <select name="plan" class="form-control" :value="formData.plan"
-              @change="formData.plan = $event.target.value"
-              :required="!!formData.province_issue">
+              @change="formData.plan = $event.target.value" :required="!!formData.province_issue">
               <option value="">-- เลือกแผนงานย่อย --</option>
               <template x-if="currentSubplans">
                 <template x-for="(sp, spIndex) in currentSubplans" :key="spIndex">
@@ -896,7 +895,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                     "พัฒนาแหล่งท่องเที่ยวและเส้นทางท่องเที่ยวมูลค่าสูง",
                     "ยกระดับผลิตภาพแรงงานภาคบริการ",
                     "สร้างมูลค่าเพิ่มให้กับสินค้าและบริการการท่องเที่ยวมูลค่าสูง",
-                    "เชื่อมโยงเครือข่ายการท่องเท่ี่ยวชุมชน",
+                    "เชื่อมโยงเครือข่ายการท่องเที่ยวชุมชน",
                     "พัฒนาผู้ประกอบการท่องเที่ยว เพื่อรองรับนักท่องเที่ยวมูลค่าสูง",
                     "พัฒนาการเข้าถึงตลาด ผ่านการใช้เทคโนโลยีดิจิทัล"
                 ],
