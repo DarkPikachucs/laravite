@@ -2481,8 +2481,9 @@
             const scopeLabel = currentScope === 'overview' ? 'ทุกปีงบประมาณ' : ('ปีงบประมาณ ' + currentScope);
             // นับจำนวนแนวทางการพัฒนาที่มีงบในสโคปนี้ (เพื่อโชว์ในหัว modal)
             const guidelineCount = new Set(
-                rows.filter(r => r.b > 0)
-                    .map(r => (r.p.guideline && String(r.p.guideline).trim()) ? String(r.p.guideline).trim() : 'ไม่ระบุแนวทาง')
+                rows.flatMap(r => (r.p.acts || [])
+                    .filter(a => (dBud[a.dindex] != null ? dBud[a.dindex] : a.budget) > 0)
+                    .map(a => (a.guideline && String(a.guideline).trim()) ? String(a.guideline).trim() : 'ไม่ระบุแนวทาง'))
             ).size;
             document.getElementById('issueModalSub').innerHTML =
                 '<b>' + bahtFmt(guidelineCount) + '</b> แนวทาง · <b>' + bahtFmt(activeCount) + '</b> โครงการ · งบรวม <b>' + bahtFmt(totalBudget) + '</b> บาท · ' + esc(scopeLabel);
@@ -2496,8 +2497,8 @@
             }
 
             // การ์ดรายโครงการ (พร้อมรายการกิจกรรม) — ใช้ซ้ำในแต่ละกลุ่มแนวทาง
-            const projectCardHtml = ({ p, b }) => {
-                const acts = (p.acts || []).map(a => {
+            const projectCardHtml = ({ p, b, actsOverride }) => {
+                const acts = (actsOverride || p.acts || []).map(a => {
                     const ab = dBud[a.dindex] != null ? dBud[a.dindex] : a.budget;
                     return '<div class="mp-act' + (ab <= 0 ? ' is-zero' : '') + '">' +
                         '<span class="mp-act-dot" style="background:' + meta.color + ';"></span>' +
@@ -2532,15 +2533,21 @@
             if (!rows.length) {
                 body.innerHTML = '<div class="empty-state compact"><div class="empty-title">ยังไม่มีข้อมูลโครงการในประเด็นนี้</div></div>';
             } else {
-                // รวมโครงการเข้ากลุ่มตามแนวทาง (คงลำดับงบมาก→น้อยจากภายในแต่ละกลุ่ม)
+                // จัดกลุ่มตาม "แนวทางของกิจกรรม" (activities.guideline) แทน development_guideline
+                // โครงการเดียวอาจอยู่ได้หลายแนวทาง → การ์ดแสดงเฉพาะกิจกรรม + งบของแนวทางนั้น
                 const groupMap = new Map();
                 rows.forEach(r => {
-                    const key = (r.p.guideline && String(r.p.guideline).trim()) ? String(r.p.guideline).trim() : 'ไม่ระบุแนวทาง';
-                    if (!groupMap.has(key)) groupMap.set(key, { name: key, rows: [], budget: 0, active: 0 });
-                    const g = groupMap.get(key);
-                    g.rows.push(r);
-                    g.budget += r.b;
-                    if (r.b > 0) g.active++;
+                    (r.p.acts || []).forEach(a => {
+                        const ab = dBud[a.dindex] != null ? dBud[a.dindex] : a.budget;
+                        const key = (a.guideline && String(a.guideline).trim()) ? String(a.guideline).trim() : 'ไม่ระบุแนวทาง';
+                        if (!groupMap.has(key)) groupMap.set(key, { name: key, projs: new Map(), budget: 0 });
+                        const g = groupMap.get(key);
+                        if (!g.projs.has(r.p.pindex)) g.projs.set(r.p.pindex, { p: r.p, acts: [], budget: 0 });
+                        const pe = g.projs.get(r.p.pindex);
+                        pe.acts.push(a);
+                        pe.budget += ab;
+                        g.budget += ab;
+                    });
                 });
                 // เรียงกลุ่มตามงบรวมมาก→น้อย
                 const groups = [...groupMap.values()].sort((a, b) => b.budget - a.budget);
@@ -2548,12 +2555,15 @@
 
                 body.innerHTML = groups.map((g, gi) => {
                     const col = groupPalette[gi % groupPalette.length];
+                    // โครงการในแนวทางนี้ (เรียงงบมาก→น้อย) แสดงเฉพาะกิจกรรมของแนวทางนี้
+                    const projEntries = [...g.projs.values()].sort((a, b) => b.budget - a.budget);
+                    const activeProjs = projEntries.filter(pe => pe.budget > 0).length;
                     const head = '<div class="mp-group-head" style="border-left-color:' + col + ';">' +
                         '<span class="mp-group-badge" style="background:' + col + ';">แนวทางที่ ' + (gi + 1) + '</span>' +
                         '<span class="mp-group-name">' + esc(g.name) + '</span>' +
-                        '<span class="mp-group-stat"><b>' + bahtFmt(g.active) + '</b> โครงการ · <b>' + bahtFmt(g.budget) + '</b> บาท</span>' +
+                        '<span class="mp-group-stat"><b>' + bahtFmt(activeProjs) + '</b> โครงการ · <b>' + bahtFmt(g.budget) + '</b> บาท</span>' +
                         '</div>';
-                    const cards = g.rows.map(projectCardHtml).join('');
+                    const cards = projEntries.map(pe => projectCardHtml({ p: pe.p, b: pe.budget, actsOverride: pe.acts })).join('');
                     return '<div class="mp-group' + (g.budget <= 0 ? ' is-zero' : '') + '">' + head + cards + '</div>';
                 }).join('');
             }
