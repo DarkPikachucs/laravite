@@ -22,6 +22,11 @@
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
 
   {{-- Vite CSS --}}
   {{-- {{ module_vite('build-phy70', 'resources/assets/sass/app.scss') }} --}}
@@ -570,10 +575,12 @@
       function applyTheme() {
         if (isLight) {
           root.classList.add('light-theme');
+          root.classList.remove('dark');
           iconSun.style.display = 'block';
           iconMoon.style.display = 'none';
         } else {
           root.classList.remove('light-theme');
+          root.classList.add('dark');
           iconSun.style.display = 'none';
           iconMoon.style.display = 'block';
         }
