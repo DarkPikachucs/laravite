@@ -400,10 +400,9 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                 style="position: absolute; top: 12px; left: 0; width: 100%; height: 4px; background: rgba(148, 163, 184, 0.2); z-index: 0; border-radius: 2px;">
               </div>
 
-              <!-- Foreground (Active) line -->
               <div
                 style="position: absolute; top: 12px; left: 0; height: 4px; background: var(--primary); z-index: 1; border-radius: 2px; transition: width 0.3s ease;"
-                :style="'width: ' + ((hoverYear ? years.indexOf(hoverYear) : (formData.operating_year ? years.indexOf(formData.operating_year) : 0)) / (years.length - 1) * 100) + '%;'">
+                :style="{ width: ((hoverYear ? years.indexOf(String(hoverYear)) : (formData.operating_year ? years.indexOf(String(formData.operating_year)) : 0)) / (years.length - 1) * 100) + '%' }">
               </div>
 
               <!-- Nodes -->
@@ -418,7 +417,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                       :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'background: var(--primary); box-shadow: 0 0 12px var(--primary-glow); border-color: var(--primary);' : ''">
                       <div
                         style="width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: opacity 0.2s;"
-                        :style="(hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 'opacity: 1;' : 'opacity: 0;'">
+                        :style="{ opacity: (hoverYear ? year <= hoverYear : (formData.operating_year && year <= formData.operating_year)) ? 1 : 0 }">
                       </div>
                     </div>
 
