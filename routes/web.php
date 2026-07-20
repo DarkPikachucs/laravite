@@ -15,6 +15,11 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/auth/google', [GoogleAuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback']);
 
+// Keycloak OAuth Routes
+Route::get('/auth/keycloak', [App\Http\Controllers\PcruAuthController::class, 'redirectToKeycloak']);
+Route::get('/api/auth/keycloak/check-login', [App\Http\Controllers\PcruAuthController::class, 'redirectToKeycloakCheckLogin']);
+Route::get('/auth/keycloak/callback', [App\Http\Controllers\PcruAuthController::class, 'handleKeycloakCallback']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function () {
         $user = auth()->user();
@@ -79,3 +84,4 @@ Route::get('/{any}', [ReactController::class, 'index'])->where('any', '^((?!api|
 Route::get('/{any}', function () {
     return view('app');
 })->where('any',  '^((?!api|sanctum|app).)*$');
+ 

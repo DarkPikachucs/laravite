@@ -691,10 +691,16 @@ const FormBuilder = () => {
                   >
                     <option value="default">Default (ทั่วไป)</option>
                     <option value="survey">Survey (แบบสอบถาม)</option>
+                    <option value="vote">Vote (โหวตบุคลากร)</option>
                   </select>
                   {template === 'survey' && (
                     <span className="text-xs text-green-600">
                       ✓ ใช้ SurveyFormRenderer
+                    </span>
+                  )}
+                  {template === 'vote' && (
+                    <span className="text-xs text-green-600">
+                      ✓ ใช้ VoteFormRenderer (ต้อง Login Keycloak)
                     </span>
                   )}
                 </div>

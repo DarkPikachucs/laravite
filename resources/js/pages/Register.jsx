@@ -23,7 +23,7 @@ const Register = () => {
     setSuccess(null);
 
     try {
-      const response = await axios.post("/api/register", formData);
+      const response = await axios.post("/register", formData);
       setSuccess("สมัครสมาชิกสำเร็จ! 🎉");
       setFormData({
         name: "",

@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'google_id',
+        'keycloak_id',
         'avatar',
         'user_type',
         'is_internal',

@@ -591,6 +591,15 @@
             </svg>
             รายการข้อเสนอโครงการที่จัดทำแล้ว
           </h3>
+          <button onclick="exportToExcel()" class="btn-action"
+            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export to XLSX
+          </button>
         </div>
 
         @if(!$user)
@@ -712,4 +721,143 @@
       </div>
     </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    function exportToExcel() {
+      // Get the proposals data from the server-side variable
+      var rawData = @json($proposals);
+      
+      if (!rawData || rawData.length === 0) {
+        alert("ไม่มีข้อมูลสำหรับ Export");
+        return;
+      }
+
+      // Format data for the excel sheet
+      var formattedData = rawData.map(function(item) {
+        var statusThai = item.status === 'draft' ? 'แบบร่าง' : 'ส่งแล้ว';
+        var createdDate = new Date(item.created_at);
+        var formattedDate = createdDate.toLocaleDateString('th-TH') + ' ' + createdDate.toLocaleTimeString('th-TH');
+        
+        // Calculate Total Budget
+        var totalBudget = 0;
+        if (item.activities && Array.isArray(item.activities)) {
+          totalBudget = item.activities.reduce(function(sum, act) {
+            return sum + (parseFloat(act.budget) || 0);
+          }, 0);
+        }
+
+        // Format KPIs
+        var kpisText = '-';
+        if (item.kpis && Array.isArray(item.kpis)) {
+          var selectedKpis = item.kpis.filter(k => k.selected);
+          if(selectedKpis.length > 0) {
+            kpisText = selectedKpis.map(k => k.name).join(', ');
+          }
+        }
+
+        // Helper to strip HTML tags if needed
+        var stripHtml = function(html) {
+          if (!html) return '-';
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          return doc.body.textContent || "";
+        };
+        
+        return {
+          'รหัสโครงการ': item.project_code || '-',
+          'ชื่อโครงการ': item.project_name || '-',
+          'หน่วยงาน': item.organization ? item.organization.name : '-',
+          'ประเด็นการพัฒนาของจังหวัด': item.province_issue || '-',
+          'แผนงานย่อยของประเด็น': item.province_subplan || item.plan || '-',
+          'ระยะเวลาดำเนินงาน (ปีงบประมาณ)': item.operating_year || '-',
+          'หลักการและเหตุผล': stripHtml(item.principles),
+          'วัตถุประสงค์ของโครงการ': stripHtml(item.objectives),
+          'กลุ่มเป้าหมาย': item.target_group || '-',
+          'ตัวชี้วัดและค่าเป้าหมาย (KPIs)': kpisText,
+          'ผลผลิต (Output)': stripHtml(item.output),
+          'ผลลัพธ์ (Outcome)': stripHtml(item.outcome),
+          'งบประมาณรวมทั้งโครงการ': totalBudget,
+          'ผู้รับผิดชอบ': item.responsible_person || '-',
+          'เบอร์โทรศัพท์': item.phone_number || '-',
+          'พื้นที่เป้าหมาย': item.target_province || '-',
+          'วันที่เสนอโครงการ': formattedDate,
+          'สถานะ': statusThai
+        };
+      });
+
+      // Create workbook and worksheet
+      var ws = XLSX.utils.json_to_sheet(formattedData);
+      
+      // Auto-adjust column widths
+      var wscols = [
+        {wch: 15}, {wch: 40}, {wch: 30}, {wch: 30}, {wch: 15},
+        {wch: 50}, {wch: 50}, {wch: 30}, {wch: 40}, {wch: 20},
+        {wch: 25}, {wch: 15}, {wch: 20}, {wch: 25}, {wch: 15}
+      ];
+      ws['!cols'] = wscols;
+
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Proposals");
+      
+      // Create Activities data
+      var activitiesData = [];
+      rawData.forEach(function(item) {
+        if (item.activities && Array.isArray(item.activities)) {
+          item.activities.forEach(function(act, index) {
+            
+            // Format Target Area
+            var targetArea = '-';
+            if (act.target_province || (act.target_district && act.target_district.length > 0) || (act.target_subdistrict && act.target_subdistrict.length > 0)) {
+                var prov = act.target_province || item.target_province || 'เพชรบูรณ์';
+                var dist = Array.isArray(act.target_district) ? act.target_district.join(', ') : (act.target_district || '');
+                var subdist = Array.isArray(act.target_subdistrict) ? act.target_subdistrict.join(', ') : (act.target_subdistrict || '');
+                targetArea = 'จ.' + prov;
+                if (dist) targetArea += ' อ.' + dist;
+                if (subdist) targetArea += ' ต.' + subdist;
+            } else if (act.target_area) {
+                targetArea = act.target_area;
+            }
+
+            activitiesData.push({
+              'รหัสโครงการ': item.project_code || '-',
+              'ชื่อโครงการ': item.project_name || '-',
+              'หน่วยงาน': item.organization ? item.organization.name : '-',
+              'ลำดับกิจกรรม': index + 1,
+              'ชื่อกิจกรรม': act.name || '-',
+              'งบประมาณ (บาท)': parseFloat(act.budget) || 0,
+              'แผนงานย่อยของประเด็น': act.subplan || item.province_subplan || item.plan || '-',
+              'แนวทางการพัฒนาจังหวัด': act.guideline || '-',
+              'พื้นที่เป้าหมาย': targetArea,
+              'กลุ่มเป้าหมาย': act.target_group || '-',
+              'ผู้รับผิดชอบ': act.responsible_person || '-',
+              'หน่วยงานรับผิดชอบ': act.responsible_agency || '-'
+            });
+          });
+        }
+      });
+
+      // Create Activities worksheet
+      var wsActivities = XLSX.utils.json_to_sheet(activitiesData);
+      var wscolsActivities = [
+        {wch: 15}, {wch: 40}, {wch: 30}, {wch: 10}, {wch: 40}, 
+        {wch: 15}, {wch: 30}, {wch: 30}, {wch: 40}, {wch: 30}, 
+        {wch: 25}, {wch: 25}
+      ];
+      wsActivities['!cols'] = wscolsActivities;
+      XLSX.utils.book_append_sheet(wb, wsActivities, "Activities");
+      
+      // Generate timestamp for filename
+      var now = new Date();
+      var dateStr = now.getFullYear().toString() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0');
+      var timeStr = String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0') + 
+                    String(now.getSeconds()).padStart(2, '0');
+      var filename = "proposals_export_" + dateStr + "_" + timeStr + ".xlsx";
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+    }
+  </script>
 </x-phy70::layouts.master>

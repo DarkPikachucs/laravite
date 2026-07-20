@@ -102,11 +102,17 @@ const LoginPage = () => {
     };
   }, [navigate]);
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const fromPath = searchParams.get('from_path') || searchParams.get('redirect') || null;
+
   // Handle Google Login with redirect (not popup)
   const handleGoogleLogin = () => {
-    // Redirect to Google OAuth with from=login
-    // Add from_path to redirect back to login page after login (default behavior)
-    window.location.href = '/auth/google?from=login&from_path=/dashboard';
+    window.location.href = `/auth/google?from=login&from_path=${encodeURIComponent(fromPath || '/dashboard')}`;
+  };
+
+  // Handle Keycloak Login
+  const handleKeycloakLogin = () => {
+    window.location.href = `/auth/keycloak?from=login&from_path=${encodeURIComponent(fromPath || '/dashboard')}`;
   };
 
   const handleLogin = async (e) => {
@@ -133,7 +139,9 @@ const LoginPage = () => {
 
       // Redirect based on user type and role
       setTimeout(() => {
-        if (isInternal) {
+        if (fromPath) {
+          navigate(fromPath);
+        } else if (isInternal) {
           // Internal user: check if has admin/manager role
           const userRoles = user.roles || [];
           const hasAdminRole = userRoles.some(r => ['admin', 'manager'].includes(r.name));
@@ -226,7 +234,7 @@ const LoginPage = () => {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+            className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg mb-3"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -235,6 +243,18 @@ const LoginPage = () => {
               <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
             เข้าสู่ระบบด้วย Google
+          </button>
+
+          {/* Keycloak Login Button */}
+          <button
+            type="button"
+            onClick={handleKeycloakLogin}
+            className="w-full flex items-center justify-center gap-3 py-3 bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-600 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            เข้าสู่ระบบด้วยระบบมหาวิทยาลัย (SSO)
           </button>
 
           {/* Help Text */}

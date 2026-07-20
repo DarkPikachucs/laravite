@@ -254,7 +254,7 @@ class FormController extends Controller
             'slug' => 'nullable|string|max:255|unique:forms,slug,' . $form->id,
             'description' => 'nullable|string',
             'form_type' => 'nullable|in:schema,script',
-            'template' => 'nullable|in:default,survey',
+            'template' => 'nullable|in:default,survey,vote',
             'schema' => 'nullable|json',
             'script_content' => 'nullable|string',
             'settings' => 'nullable|json',

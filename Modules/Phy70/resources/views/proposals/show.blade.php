@@ -194,7 +194,7 @@
 
       <div class="info-item">
         <div class="info-label">แผนงานย่อยของประเด็น</div>
-        <div class="info-val">{{ $proposal->province_subplan ?: 'ไม่ระบุข้อมูล' }}</div>
+        <div class="info-val">{{ $proposal->plan ?: 'ไม่ระบุข้อมูล' }}</div>
       </div>
 
       <div class="info-item">

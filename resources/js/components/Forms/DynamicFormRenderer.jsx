@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom"
 import axios from "axios"
 import toast from "react-hot-toast"
 import SurveyFormRenderer from "../../pages/forms/SurveyFormRenderer"
+import VoteFormRenderer from "../../pages/forms/VoteFormRenderer"
 
 const DynamicFormRenderer = ({ form: propForm }) => {
   const { uuid } = useParams()
@@ -34,7 +35,7 @@ const DynamicFormRenderer = ({ form: propForm }) => {
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) metaDesc.setAttribute('content', formData.description || '')
 
-    if (formData.template === 'survey') {
+    if (formData.template === 'survey' || formData.template === 'vote') {
       setLoading(false)
       return
     }
@@ -556,6 +557,10 @@ const DynamicFormRenderer = ({ form: propForm }) => {
   // Render Survey template
   if (form.template === 'survey') {
     return <SurveyFormRenderer form={form} uuid={uuid || form.uuid} />
+  }
+
+  if (form.template === 'vote') {
+    return <VoteFormRenderer form={form} uuid={uuid || form.uuid} />
   }
 
   const fonts = [
