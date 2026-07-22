@@ -188,6 +188,21 @@
       </div>
 
       <div class="info-item">
+        <div class="info-label">แหล่งงบประมาณ</div>
+        <div class="info-val">
+          @php
+            $budgetSources = [
+                '1' => 'งบประมาณของจังหวัด',
+                '2' => 'งบประมาณของกระทรวง/กรม',
+                '3' => 'งบประมาณขององค์กรปกครองส่วนท้องถิ่น',
+                '4' => 'งบประมาณของภาคเอกชน/ชุมชน (ถ้ามี)',
+            ];
+          @endphp
+          {{ $proposal->budget_source ? ($budgetSources[$proposal->budget_source] ?? 'ไม่ระบุข้อมูล') : 'ไม่ระบุข้อมูล' }}
+        </div>
+      </div>
+
+      <div class="info-item">
         <div class="info-label">ประเด็นการพัฒนาของจังหวัด</div>
         <div class="info-val">{{ $proposal->province_issue ?: 'ไม่ระบุข้อมูล' }}</div>
       </div>

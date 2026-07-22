@@ -66,6 +66,7 @@ class Phy70Controller extends Controller
             // Section 2
             'province_issue' => $req . '|string',
             'operating_year' => $req . '|string',
+            'budget_source' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
             'plan' => $req . '|string',
@@ -166,6 +167,7 @@ class Phy70Controller extends Controller
             'outcome' => $request->outcome,
             'main_activity' => $request->main_activity,
             'operating_agency' => $request->operating_agency,
+            'budget_source' => $request->budget_source,
             'responsible_person' => $request->responsible_person,
             'position' => $request->position,
             'phone_number' => $request->phone_number,
@@ -272,6 +274,7 @@ class Phy70Controller extends Controller
             // Section 2
             'province_issue' => $req . '|string',
             'operating_year' => $req . '|string',
+            'budget_source' => $req . '|string',
             'development_guideline' => 'nullable|string',
             'main_plan' => 'nullable|string',
             'plan' => $req . '|string',
@@ -345,6 +348,7 @@ class Phy70Controller extends Controller
             'outcome' => $request->outcome,
             'main_activity' => $request->main_activity,
             'operating_agency' => $request->operating_agency,
+            'budget_source' => $request->budget_source,
             'responsible_person' => $request->responsible_person,
             'position' => $request->position,
             'phone_number' => $request->phone_number,

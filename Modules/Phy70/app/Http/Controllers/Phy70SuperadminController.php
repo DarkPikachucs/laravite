@@ -203,4 +203,268 @@ class Phy70SuperadminController extends Controller
             $proposal->save();
         }
     }
+
+    public function documentBuilder()
+    {
+        $this->checkSuperadmin();
+        $proposals = Phy70Proposal::orderBy('created_at', 'desc')->get();
+        $templates = \Modules\Phy70\Models\Phy70DocumentBuilder::all();
+        $reports = \Modules\Phy70\Models\Phy70Report::with('template', 'creator')->orderBy('created_at', 'desc')->get();
+        return view('phy70::superadmin.document_builder', compact('proposals', 'templates', 'reports'));
+    }
+
+    public function generateDocument(Request $request)
+    {
+        $this->checkSuperadmin();
+        
+        $template = \Modules\Phy70\Models\Phy70DocumentBuilder::findOrFail($request->input('template_id'));
+        $payload = $template->output_schema;
+        
+        $dataSource = $request->input('data_source', 'proposals');
+        $outputFormat = $request->input('output_format', 'pdf');
+        
+        $selectedProposalIds = $request->input('proposals', []);
+        
+        if (!empty($selectedProposalIds)) {
+            // If user manually selected proposals, use them
+            $proposals = Phy70Proposal::whereIn('id', $selectedProposalIds)->get();
+        } else {
+            // Otherwise, apply advanced filters on all proposals
+            $query = Phy70Proposal::query();
+            
+            if ($dataSource === 'proposals') {
+                if ($request->filled('filter_year')) {
+                    $query->where('operating_year', $request->filter_year);
+                }
+                if ($request->filled('filter_status')) {
+                    $query->where('status', $request->filter_status);
+                }
+                if ($request->filled('order_by')) {
+                    switch ($request->order_by) {
+                        case 'created_at_desc': $query->orderBy('created_at', 'desc'); break;
+                        case 'created_at_asc': $query->orderBy('created_at', 'asc'); break;
+                        // Budget requires joining or complex query, for now default to created_at
+                        default: $query->orderBy('created_at', 'desc'); break;
+                    }
+                } else {
+                    $query->orderBy('created_at', 'desc');
+                }
+                if ($request->filled('limit') && intval($request->limit) > 0) {
+                    $query->limit(intval($request->limit));
+                }
+            }
+            $proposals = $query->get();
+        }
+        
+        return view('phy70::superadmin.document_preview', compact('payload', 'proposals', 'request', 'template', 'dataSource', 'outputFormat'));
+    }
+
+    public function storeTemplate(Request $request)
+    {
+        $this->checkSuperadmin();
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'input_schema' => 'nullable|json',
+            'output_schema' => 'nullable|json',
+        ]);
+        
+        $inputSchema = $request->input_schema ? json_decode($request->input_schema, true) : [];
+        $outputSchema = $request->output_schema ? json_decode($request->output_schema, true) : [];
+        
+        \Modules\Phy70\Models\Phy70DocumentBuilder::create([
+            'name' => $request->name,
+            'input_schema' => $inputSchema,
+            'output_schema' => $outputSchema,
+        ]);
+        
+        return back()->with('success', 'สร้าง Template ใหม่เรียบร้อยแล้ว');
+    }
+
+    public function updateTemplate(Request $request, $id)
+    {
+        $this->checkSuperadmin();
+        $template = \Modules\Phy70\Models\Phy70DocumentBuilder::findOrFail($id);
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'input_schema' => 'nullable|json',
+            'output_schema' => 'nullable|json',
+        ]);
+        
+        $inputSchema = $request->input_schema ? json_decode($request->input_schema, true) : [];
+        $outputSchema = $request->output_schema ? json_decode($request->output_schema, true) : [];
+        
+        $template->update([
+            'name' => $request->name,
+            'input_schema' => $inputSchema,
+            'output_schema' => $outputSchema,
+        ]);
+        
+        return back()->with('success', 'อัปเดต Template เรียบร้อยแล้ว');
+    }
+
+    public function deleteTemplate($id)
+    {
+        $this->checkSuperadmin();
+        \Modules\Phy70\Models\Phy70DocumentBuilder::findOrFail($id)->delete();
+        
+        return back()->with('success', 'ลบ Template เรียบร้อยแล้ว');
+    }
+
+    public function previewTemplate(Request $request, $id)
+    {
+        $this->checkSuperadmin();
+        $template = \Modules\Phy70\Models\Phy70DocumentBuilder::findOrFail($id);
+        
+        $payload = $template->output_schema;
+        
+        // Mock a proposal for preview purposes
+        $proposals = Phy70Proposal::take(1)->get();
+        if ($proposals->isEmpty()) {
+            // Create a fake proposal if none exist just for preview
+            $proposals = collect([(object)[
+                'id' => 0,
+                'project_name' => 'โครงการตัวอย่าง (Preview)',
+                'project_code' => 'PRJ-2570-0000',
+                'province_issue' => 'ประเด็นการพัฒนาตัวอย่าง',
+                'kpis' => [['name' => 'ตัวชี้วัดตัวอย่าง 1', 'selected' => true]],
+                'activities' => [['name' => 'กิจกรรมตัวอย่าง 1', 'budget' => 100000]]
+            ]]);
+        }
+        
+        $dataSource = 'proposals';
+        $outputFormat = 'pdf';
+        
+        return view('phy70::superadmin.document_preview', compact('payload', 'proposals', 'request', 'template', 'dataSource', 'outputFormat'));
+    }
+
+    public function saveReport(Request $request)
+    {
+        $this->checkSuperadmin();
+        
+        $request->validate([
+            'report_name' => 'required|string|max:255',
+            'template_id' => 'required|exists:phy70_document_builders,id',
+            'data_source' => 'required|string',
+            'output_format' => 'required|string',
+            'proposals' => 'nullable|array',
+        ]);
+        
+        \Modules\Phy70\Models\Phy70Report::create([
+            'name' => $request->report_name,
+            'template_id' => $request->template_id,
+            'data_source' => $request->data_source,
+            'filters' => [
+                'year' => $request->filter_year,
+                'status' => $request->filter_status,
+                'order_by' => $request->order_by,
+                'limit' => $request->limit,
+                'custom_query' => $request->custom_query,
+                'page_orientation' => $request->page_orientation,
+                'custom_groups' => json_decode($request->custom_groups, true) ?? []
+            ],
+            'selected_ids' => $request->input('proposals', []),
+            'output_format' => $request->output_format,
+            'creator_id' => $this->guard()->id(),
+        ]);
+        
+        return back()->with('success', 'บันทึกรายงานใหม่เรียบร้อยแล้ว');
+    }
+
+    public function viewReport(Request $request, $id)
+    {
+        $this->checkSuperadmin();
+        
+        $report = \Modules\Phy70\Models\Phy70Report::with('template')->findOrFail($id);
+        
+        $template = $report->template;
+        $payload = $template ? $template->output_schema : [];
+        
+        $dataSource = $report->data_source;
+        $outputFormat = $report->output_format;
+        $filters = $report->filters ?? [];
+        
+        $selectedProposalIds = $report->selected_ids ?? [];
+        
+        if (!empty($selectedProposalIds)) {
+            $proposals = Phy70Proposal::whereIn('id', $selectedProposalIds)->get();
+        } else {
+            $query = Phy70Proposal::query();
+            if ($dataSource === 'proposals') {
+                if (!empty($filters['year'])) {
+                    $query->where('operating_year', $filters['year']);
+                }
+                if (!empty($filters['status'])) {
+                    $query->where('status', $filters['status']);
+                }
+                if (!empty($filters['order_by'])) {
+                    switch ($filters['order_by']) {
+                        case 'created_at_desc': $query->orderBy('created_at', 'desc'); break;
+                        case 'created_at_asc': $query->orderBy('created_at', 'asc'); break;
+                        default: $query->orderBy('created_at', 'desc'); break;
+                    }
+                } else {
+                    $query->orderBy('created_at', 'desc');
+                }
+                if (!empty($filters['limit']) && intval($filters['limit']) > 0) {
+                    $query->limit(intval($filters['limit']));
+                }
+            }
+            $proposals = $query->get();
+        }
+        
+        // Merge custom_groups and page_orientation into request so it can be accessed in the view
+        if (isset($filters['custom_groups'])) {
+            $request->merge(['custom_groups' => $filters['custom_groups']]);
+        }
+        if (isset($filters['page_orientation'])) {
+            $request->merge(['page_orientation' => $filters['page_orientation']]);
+        }
+        
+        // Pass the request but we mock it if needed
+        return view('phy70::superadmin.document_preview', compact('payload', 'proposals', 'request', 'template', 'dataSource', 'outputFormat'));
+    }
+
+    public function updateReport(Request $request, $id)
+    {
+        $this->checkSuperadmin();
+        
+        $report = \Modules\Phy70\Models\Phy70Report::findOrFail($id);
+        
+        $request->validate([
+            'report_name' => 'required|string|max:255',
+            'template_id' => 'required|exists:phy70_document_builders,id',
+            'data_source' => 'required|string',
+            'output_format' => 'required|string',
+            'proposals' => 'nullable|array',
+        ]);
+        
+        $report->update([
+            'name' => $request->report_name,
+            'template_id' => $request->template_id,
+            'data_source' => $request->data_source,
+            'filters' => [
+                'year' => $request->filter_year,
+                'status' => $request->filter_status,
+                'order_by' => $request->order_by,
+                'limit' => $request->limit,
+                'custom_query' => $request->custom_query,
+                'page_orientation' => $request->page_orientation,
+                'custom_groups' => json_decode($request->custom_groups, true) ?? []
+            ],
+            'selected_ids' => $request->input('proposals', []),
+            'output_format' => $request->output_format,
+        ]);
+        
+        return back()->with('success', 'อัปเดตรายงานเรียบร้อยแล้ว');
+    }
+
+    public function deleteReport($id)
+    {
+        $this->checkSuperadmin();
+        \Modules\Phy70\Models\Phy70Report::findOrFail($id)->delete();
+        
+        return back()->with('success', 'ลบรายงานเรียบร้อยแล้ว');
+    }
 }

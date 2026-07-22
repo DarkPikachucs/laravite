@@ -67,6 +67,19 @@ Route::prefix('app/phy70')->group(function () {
     Route::post('/superadmin/proposal/{id}/status', [Phy70SuperadminController::class, 'updateProposalStatus'])->name('phy70.superadmin.proposal.status');
     Route::delete('/superadmin/proposal/{id}', [Phy70SuperadminController::class, 'deleteProposal'])->name('phy70.superadmin.proposal.delete');
     
+    // Superadmin Document Builder
+    Route::get('/superadmin/document-builder', [Phy70SuperadminController::class, 'documentBuilder'])->name('phy70.superadmin.document_builder');
+    Route::post('/superadmin/document-builder/generate', [Phy70SuperadminController::class, 'generateDocument'])->name('phy70.superadmin.document_generate');
+    Route::post('/superadmin/document-builder/report', [Phy70SuperadminController::class, 'saveReport'])->name('phy70.superadmin.document_report.store');
+    Route::get('/superadmin/document-builder/report/{id}', [Phy70SuperadminController::class, 'viewReport'])->name('phy70.superadmin.document_report.view');
+    Route::put('/superadmin/document-builder/report/{id}', [Phy70SuperadminController::class, 'updateReport'])->name('phy70.superadmin.document_report.update');
+    Route::delete('/superadmin/document-builder/report/{id}', [Phy70SuperadminController::class, 'deleteReport'])->name('phy70.superadmin.document_report.delete');
+    
+    Route::post('/superadmin/document-builder/template', [Phy70SuperadminController::class, 'storeTemplate'])->name('phy70.superadmin.document_template.store');
+    Route::get('/superadmin/document-builder/template/{id}/preview', [Phy70SuperadminController::class, 'previewTemplate'])->name('phy70.superadmin.document_template.preview');
+    Route::put('/superadmin/document-builder/template/{id}', [Phy70SuperadminController::class, 'updateTemplate'])->name('phy70.superadmin.document_template.update');
+    Route::delete('/superadmin/document-builder/template/{id}', [Phy70SuperadminController::class, 'deleteTemplate'])->name('phy70.superadmin.document_template.delete');
+    
     // Test Route
     Route::get('/test-session', function () {
         $sessionsPath = storage_path('framework/sessions');

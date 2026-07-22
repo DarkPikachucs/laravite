@@ -39,6 +39,7 @@ class Phy70Proposal extends Model
         'status',
         'project_code',
         'yearly_budgets',
+        'budget_source',
     ];
 
     protected $casts = [

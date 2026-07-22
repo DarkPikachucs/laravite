@@ -365,6 +365,17 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
           </div>
 
           <div class="form-group">
+            <label class="form-label">แหล่งงบประมาณ <span style="color: var(--danger);">*</span></label>
+            <select name="budget_source" class="form-control" x-model="formData.budget_source" required>
+              <option value="">-- เลือกแหล่งงบประมาณ --</option>
+              <option value="1">งบประมาณของจังหวัด</option>
+              <option value="2">งบประมาณของกระทรวง/กรม</option>
+              <option value="3">งบประมาณขององค์กรปกครองส่วนท้องถิ่น</option>
+              <option value="4">งบประมาณของภาคเอกชน/ชุมชน (ถ้ามี)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label class="form-label">ประเด็นการพัฒนาของจังหวัด <span style="color: var(--danger);">*</span></label>
             <select name="province_issue" class="form-control" :value="formData.province_issue"
               @change="formData.province_issue = $event.target.value; onIssueChange()" required>
@@ -956,7 +967,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
                     "พัฒนาระบบสวัสดิการ บริการสาธารณะ และสภาพแวดล้อมที่เอื้อต่อคนทุกช่วงวัย",
                     "พัฒนาระบบบริการสุขภาพ ระบบสาธารณสุข และการใช้เทคโนโลยีในการขยายการเข้าถึงบริการ",
                     "ส่งเสริมผู้สูงอายุให้มีศักยภาพและมีส่วนร่วมในสังคม",
-                    "ส่งเสริิมกระบวนการทางสังคม พัฒนาทุนทางสัังคม สร้างการมีส่วนร่วมการเป็นหุ้นส่วนในการพัฒนาสังคมทุกมิติ",
+                    "ส่งเสริมกระบวนการทางสังคม พัฒนาทุนทางสัังคม สร้างการมีส่วนร่วมการเป็นหุ้นส่วนในการพัฒนาสังคมทุกมิติ",
                     "ยกระดับการให้บริการภาครัฐ ด้วยเทคโนโลยีและนวัตกรรม"
                 ],
                 "guidelines": [
@@ -1070,6 +1081,7 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
             years: ['2571', '2572', '2573', '2574', '2575'],
             formData: {
                 project_name: oldData.project_name || '',
+                budget_source: oldData.budget_source || '',
                 province_issue: oldData.province_issue || '',
                 plan: oldData.plan || '',
                 operating_year: oldData.operating_year || '',

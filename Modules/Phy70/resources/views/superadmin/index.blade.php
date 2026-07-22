@@ -139,7 +139,10 @@
         <span style="background: var(--primary); padding: 8px; border-radius: 12px;">👑</span>
         Superadmin Dashboard
       </h2>
-      <a href="/app/phy70" style="color: var(--secondary); text-decoration: none;">← กลับแดชบอร์ดหลัก</a>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <a href="{{ route('phy70.superadmin.document_builder') }}" class="btn-action" style="text-decoration: none; padding: 10px 16px; font-size: 14px;">📄 สร้างเอกสาร / แบบฟอร์ม จ.1</a>
+        <a href="/app/phy70" style="color: var(--secondary); text-decoration: none;">← กลับแดชบอร์ดหลัก</a>
+      </div>
     </header>
 
     @if(session('success'))
