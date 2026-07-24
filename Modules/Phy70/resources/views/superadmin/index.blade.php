@@ -236,11 +236,20 @@
               </form>
             </td>
             <td>
-              <form action="{{ route('phy70.superadmin.user.delete', $u->id) }}" method="POST"
-                onsubmit="return confirm('ยืนยันการลบบัญชีนี้?');">
-                @csrf @method('DELETE')
-                <button type="submit" class="btn-danger">ลบ</button>
-              </form>
+              <div style="display:flex; gap:8px;">
+                <form id="reset_pwd_form_{{ $u->id }}" action="{{ route('phy70.users.reset-password', $u->id) }}" method="POST" style="display:none;">
+                    @csrf
+                    <input type="hidden" name="password" value="">
+                    <input type="hidden" name="password_confirmation" value="">
+                </form>
+                <button type="button" class="btn-action" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);" onclick="resetUserPassword({{ $u->id }})">รีเซ็ตรหัส</button>
+                
+                <form action="{{ route('phy70.superadmin.user.delete', $u->id) }}" method="POST"
+                  onsubmit="return confirm('ยืนยันการลบบัญชีนี้?');">
+                  @csrf @method('DELETE')
+                  <button type="submit" class="btn-danger">ลบ</button>
+                </form>
+              </div>
             </td>
           </tr>
           @endforeach
@@ -301,11 +310,22 @@
 
   <script>
     function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    function resetUserPassword(userId) {
+        let pwd = prompt('กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร):');
+        if (pwd && pwd.length >= 6) {
+            document.getElementById('reset_pwd_form_' + userId).querySelector('[name=password]').value = pwd;
+            document.getElementById('reset_pwd_form_' + userId).querySelector('[name=password_confirmation]').value = pwd;
+            document.getElementById('reset_pwd_form_' + userId).submit();
+        } else if (pwd !== null) {
+            alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
         }
+    }
   </script>
 </x-phy70::layouts.master>

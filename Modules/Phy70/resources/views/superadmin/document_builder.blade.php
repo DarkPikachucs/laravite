@@ -257,14 +257,17 @@
           </div>
 
           <div>
-            <label class="block mb-1 text-sm font-medium text-gray-700">5. กำหนดทิศทางหน้ากระดาษ (Page Orientation)</label>
+            <label class="block mb-1 text-sm font-medium text-gray-700">5. กำหนดทิศทางหน้ากระดาษ (Page
+              Orientation)</label>
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <label class="p-3 text-center transition border rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 create-orientation-label border-indigo-500 bg-indigo-50 ring-2 ring-indigo-300">
+              <label
+                class="p-3 text-center transition border border-indigo-500 rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 create-orientation-label bg-indigo-50 ring-2 ring-indigo-300">
                 <input type="radio" name="page_orientation" value="landscape" class="sr-only" checked>
                 <span class="block mb-1 text-xl">🔲</span>
                 <span class="text-sm font-medium text-gray-700">แนวนอน (Landscape)</span>
               </label>
-              <label class="p-3 text-center transition border rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 create-orientation-label">
+              <label
+                class="p-3 text-center transition border rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 create-orientation-label">
                 <input type="radio" name="page_orientation" value="portrait" class="sr-only">
                 <span class="block mb-1 text-xl">📱</span>
                 <span class="text-sm font-medium text-gray-700">แนวตั้ง (Portrait)</span>
@@ -693,11 +696,13 @@
         <div>
           <label class="block mb-1 text-sm font-medium text-gray-700">ทิศทางหน้ากระดาษ (Page Orientation)</label>
           <div class="grid grid-cols-2 gap-3">
-            <label class="p-2 text-center border rounded-lg cursor-pointer hover:border-indigo-500 edit-orientation-label">
+            <label
+              class="p-2 text-center border rounded-lg cursor-pointer hover:border-indigo-500 edit-orientation-label">
               <input type="radio" name="page_orientation" value="landscape" class="sr-only">
               <span class="text-xs font-medium text-gray-700">แนวนอน</span>
             </label>
-            <label class="p-2 text-center border rounded-lg cursor-pointer hover:border-indigo-500 edit-orientation-label">
+            <label
+              class="p-2 text-center border rounded-lg cursor-pointer hover:border-indigo-500 edit-orientation-label">
               <input type="radio" name="page_orientation" value="portrait" class="sr-only">
               <span class="text-xs font-medium text-gray-700">แนวตั้ง</span>
             </label>
@@ -869,7 +874,7 @@
             <div class="p-3 border rounded bg-gray-50 custom-group-item" id="${groupId}">
                 <div class="flex items-start justify-between mb-2">
                     <div class="w-full mr-2 space-y-2">
-                        <select class="block w-full p-2 text-sm font-semibold border border-indigo-300 rounded-md shadow-sm bg-indigo-50 text-indigo-700 group-plan-select" onchange="filterProposalsByPlan('${mode}', '${groupId}'); updateCustomGroupsInput('${mode}')">
+                        <select class="block w-full p-2 text-sm font-semibold text-indigo-700 border border-indigo-300 rounded-md shadow-sm bg-indigo-50 group-plan-select" onchange="filterProposalsByPlan('${mode}', '${groupId}'); updateCustomGroupsInput('${mode}')">
                             <option value="">-- เลือกแผนงานย่อยของประเด็น (ต้องเลือกเพื่อกรองโครงการด้านล่าง) --</option>
                             ${uniquePlans.map(plan => `<option value="${plan.replace(/"/g, '&quot;')}" ${selectedPlan === plan ? 'selected' : ''}>แผนงาน: ${plan}</option>`).join('')}
                         </select>
@@ -943,7 +948,7 @@
                             <option value="N1" ${regionalGoal === 'N1' ? 'selected' : ''}>แนวทางการพัฒนาที่ 1 เกษตรมูลค่าสูงบนฐานนวัตกรรมสีเขียวที่ตรวจสอบได้</option>
                             <option value="N2" ${regionalGoal === 'N2' ? 'selected' : ''}>แนวทางการพัฒนาที่ 2 ท่องเที่ยวคุณภาพมูลค่าสูงและบริการสุขภาพระดับโลก</option>
                             <option value="N3" ${regionalGoal === 'N3' ? 'selected' : ''}>แนวทางการพัฒนาที่ 3 อุตสาหกรรมนวัตกรรมฐานชีวภาพและดิจิทัลสีเขียว</option>
-                            <option value="N4" ${regionalGoal === 'N4' ? 'selected' : ''}>แนวทางการพัฒนาที่ 4 การค้า การค้าชายแดน และระบบโลจิสติกส์ที่เชื่อมโยงห่วงโซ่เศรษฐกิจภูมิภาค</option>
+                            <option value="N4" ${regionalGoal === 'N4' ? 'selected' : ''}>แนวทางการพัฒนาที่ 4 การค้าชายแดน และระบบโลจิสติกส์ที่เชื่อมโยงห่วงโซ่เศรษฐกิจภูมิภาค</option>
                             <option value="N5" ${regionalGoal === 'N5' ? 'selected' : ''}>แนวทางการพัฒนาที่ 5 การเพิ่มผลิตภาพแรงงานและยกระดับคุณภาพชีวิต</option>
                             <option value="N6" ${regionalGoal === 'N6' ? 'selected' : ''}>แนวทางการพัฒนาที่ 6 การจัดการทรัพยากรธรรมชาติและมลพิษเชิงรุก</option>
                         </select>

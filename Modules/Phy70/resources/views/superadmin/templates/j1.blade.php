@@ -72,12 +72,15 @@
       }
 
       foreach($proposals as $p) {
+      if (!isset($proposalGroupMap[$p->id])) {
+      continue;
+      }
+
       $issue = $p->province_issue ?: 'ไม่ระบุประเด็นการพัฒนา';
       $plan = $p->plan ?: 'ไม่ระบุแผนงาน';
 
-      // Use custom group name if this proposal was assigned to one, otherwise fallback to its own project name
-      $project = isset($proposalGroupMap[$p->id]) ? $proposalGroupMap[$p->id] : ($p->project_name ?:
-      'ไม่ระบุโครงการสำคัญ');
+      // Use custom group name
+      $project = $proposalGroupMap[$p->id];
 
       if(!isset($grouped[$issue])) {
       $grouped[$issue] = ['proposals' => [], 'plans' => []];

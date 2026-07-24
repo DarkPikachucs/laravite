@@ -24,23 +24,34 @@ class Phy70Controller extends Controller
 
         if ($user) {
             if ($user->role === 'superadmin') {
-                $proposals = Phy70Proposal::with(['organization', 'user'])->orderBy('created_at', 'desc')->get();
+                $proposals = Phy70Proposal::with(['organization', 'user'])
+                    ->where('status', '!=', 'draft')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
             } else {
-                $proposals = Phy70Proposal::with(['organization', 'user'])->where('organization_id', $user->organization_id)
+                $proposals = Phy70Proposal::with(['organization', 'user'])
+                    ->where('organization_id', $user->organization_id)
+                    ->where('status', '!=', 'draft')
                     ->orderBy('created_at', 'desc')
                     ->get();
             }
         }
 
         // Get all registered organizations with their coordinators (admins)
-        $organizations = \Modules\Phy70\Models\Phy70Organization::with(['users'])->get()->map(function($org) {
+        $organizations = \Modules\Phy70\Models\Phy70Organization::with(['users'])->orderBy('created_at', 'desc')->get()->map(function($org) {
             $admin = $org->users->where('role', 'admin')->first();
             $org->coordinator_name = $admin ? $admin->name : 'ไม่ระบุ';
             $org->coordinator_phone = $admin ? $admin->phone_number : 'ไม่ระบุ';
             return $org;
         });
 
-        return view('phy70::index', compact('user', 'proposals', 'organizations'));
+        $latestProposals = Phy70Proposal::with(['organization'])
+            ->where('status', '!=', 'draft') // or 'submitted'
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('phy70::index', compact('user', 'proposals', 'organizations', 'latestProposals'));
     }
 
     public function createProposal()
@@ -389,7 +400,7 @@ class Phy70Controller extends Controller
     public function dashboard()
     {
         // ---- Real data: proposals mapped to the dashboard shape -----------
-        $projects = $this->realProjects();
+        $projects = $this->realProjects()->filter(fn ($p) => in_array($p['status'], ['submitted', 'approved']))->values();
 
         // ---- Activity rows (project_detail) flattened across all projects -
         $details = $projects->flatMap(fn ($p) => $p['details'])->values();
@@ -778,6 +789,7 @@ class Phy70Controller extends Controller
                 'operating_agency'   => $this->cleanValue($p->operating_agency, 'ไม่ระบุหน่วยงาน'),
                 'output'             => $this->cleanValue($p->output, '—'),
                 'outcome'            => $this->cleanValue($p->outcome, '—'),
+                'status'             => $p->status,
                 'details'            => $details,
             ];
         })->values();

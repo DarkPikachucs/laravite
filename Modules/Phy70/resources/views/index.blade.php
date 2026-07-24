@@ -668,7 +668,7 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            หน่วยงานที่ลงทะเบียนแล้ว
+            หน่วยงานที่ลงทะเบียนล่าสุด
           </h3>
           <div
             style="display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; padding-right: 4px;">
@@ -686,6 +686,40 @@
                     }}</strong></span>
                 <span>เบอร์โทรติดต่อ: <strong style="color: var(--secondary);">{{ $org->coordinator_phone
                     }}</strong></span>
+              </div>
+            </div>
+            @endforeach
+            @endif
+          </div>
+        </div>
+
+        <!-- Recently Submitted Projects Card -->
+        <div class="glass-card"
+          style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(52, 211, 153, 0.05) 100%);">
+          <h3 class="section-title" style="margin-bottom: 16px; color: var(--success);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            โครงการที่ส่งล่าสุด
+          </h3>
+          <div
+            style="display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; padding-right: 4px;">
+            @if($latestProposals->isEmpty())
+            <div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px 0;">
+              ยังไม่มีโครงการที่ส่งล่าสุด
+            </div>
+            @else
+            @foreach($latestProposals as $latestProp)
+            <div
+              style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">{{ $latestProp->project_name }}</div>
+              <div style="font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px;">
+                <span>หน่วยงาน: <strong style="color: var(--success);">{{ $latestProp->organization ? $latestProp->organization->name : 'ไม่ระบุ' }}</strong></span>
+                <span>ผู้รับผิดชอบ: <strong>{{ $latestProp->responsible_person }}</strong></span>
+                <span>วันที่ส่ง: <strong>{{ $latestProp->created_at->timezone('Asia/Bangkok')->addYears(543)->format('d/m/Y H:i') }} น.</strong></span>
               </div>
             </div>
             @endforeach

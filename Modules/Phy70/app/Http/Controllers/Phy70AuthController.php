@@ -68,7 +68,7 @@ class Phy70AuthController extends Controller
         $request->validate([
             'organization_name' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:sqlite_phy70.phy70_users,email',
+            'email' => 'required|string|email|max:255|unique:phy70_users,email',
             'password' => 'required|string|min:6|confirmed',
             'phone_number' => 'required|string|max:50',
         ], [
