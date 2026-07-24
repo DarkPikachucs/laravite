@@ -25,13 +25,13 @@ class Phy70Controller extends Controller
         if ($user) {
             if ($user->role === 'superadmin') {
                 $proposals = Phy70Proposal::with(['organization', 'user'])
-                    ->where('status', '!=', 'draft')
+                    //->where('status', '!=', 'draft')
                     ->orderBy('created_at', 'desc')
                     ->get();
             } else {
                 $proposals = Phy70Proposal::with(['organization', 'user'])
                     ->where('organization_id', $user->organization_id)
-                    ->where('status', '!=', 'draft')
+                    //->where('status', '!=', 'draft')
                     ->orderBy('created_at', 'desc')
                     ->get();
             }

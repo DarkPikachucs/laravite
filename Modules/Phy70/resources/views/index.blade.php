@@ -589,7 +589,7 @@
               <line x1="16" y1="17" x2="8" y2="17" />
               <polyline points="10 9 9 9 8 9" />
             </svg>
-            รายการข้อเสนอโครงการที่จัดทำแล้ว
+            รายการข้อเสนอโครงการที่จัดทำแล้ว {{ $proposals->count().' โครงการ' }}
           </h3>
           <button onclick="exportToExcel()" class="btn-action"
             style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
@@ -600,6 +600,14 @@
             </svg>
             Export to XLSX
           </button>
+        </div>
+        {{-- tagline --}}
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+          {{ "แบบร่าง " .$proposals->where('status', 'draft')->count().' โครงการ' }}
+          <span style="margin: 0 8px;">|</span>
+          <span style="color: var(--success); font-weight: 600;">{{ $proposals->where('status', 'submitted')->count() >
+            0 ? 'ส่งแล้ว'."ส่งแล้ว " .$proposals->where('status', 'submitted')->count().' โครงการ' :
+            'ยังไม่มีโครงการที่ส่งแล้ว' }}</span>
         </div>
 
         @if(!$user)
@@ -715,11 +723,15 @@
             @foreach($latestProposals as $latestProp)
             <div
               style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
-              <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">{{ $latestProp->project_name }}</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">{{ $latestProp->project_name }}
+              </div>
               <div style="font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px;">
-                <span>หน่วยงาน: <strong style="color: var(--success);">{{ $latestProp->organization ? $latestProp->organization->name : 'ไม่ระบุ' }}</strong></span>
+                <span>หน่วยงาน: <strong style="color: var(--success);">{{ $latestProp->organization ?
+                    $latestProp->organization->name : 'ไม่ระบุ' }}</strong></span>
                 <span>ผู้รับผิดชอบ: <strong>{{ $latestProp->responsible_person }}</strong></span>
-                <span>วันที่ส่ง: <strong>{{ $latestProp->created_at->timezone('Asia/Bangkok')->addYears(543)->format('d/m/Y H:i') }} น.</strong></span>
+                <span>วันที่ส่ง: <strong>{{
+                    $latestProp->created_at->timezone('Asia/Bangkok')->addYears(543)->format('d/m/Y H:i') }}
+                    น.</strong></span>
               </div>
             </div>
             @endforeach
