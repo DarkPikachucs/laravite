@@ -22,6 +22,7 @@ const ProjectList = () => {
   const years = Array.from({ length: 2 }, (_, i) => new Date().getFullYear() - i); // สร้างอาร์เรย์ของปีย้อนหลัง 2 ปี
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleItem = (id) => {
     setOpenItems((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -436,12 +437,28 @@ const ProjectList = () => {
 
           {/* รายการโครงการ */}
           <div className="flex-1 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800 sm:text-2xl">โครงการในคณะ</h2>
-              <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm sm:px-4 sm:py-2">
-                <span className="text-xs text-gray-600 sm:text-sm">
-                  พบ {projects.filter(item => item.section_id == selectedFaculty && item.output_id == '04').length} โครงการ
-                </span>
+            <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-bold text-gray-800 sm:text-2xl">{searchTerm ? 'ผลการค้นหาจากทุกหน่วยงาน' : 'โครงการในคณะ'}</h2>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="search"
+                    className="block w-full p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="ค้นหาชื่อหรือรหัสโครงการ..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm sm:px-4 sm:py-2 whitespace-nowrap">
+                  <span className="text-xs text-gray-600 sm:text-sm">
+                    พบ {projects.filter(item => item.output_id == '04' && (searchTerm ? (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.id.toLowerCase().includes(searchTerm.toLowerCase())) : item.section_id == selectedFaculty)).length} โครงการ
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -461,9 +478,9 @@ const ProjectList = () => {
                     </div>
                   </div>
                 ))
-              ) : projects.filter(item => item.section_id == selectedFaculty && item.output_id == '04').length > 0 ? (
+              ) : projects.filter(item => item.output_id == '04' && (searchTerm ? (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.id.toLowerCase().includes(searchTerm.toLowerCase())) : item.section_id == selectedFaculty)).length > 0 ? (
                 projects.filter(
-                  item => item.section_id == selectedFaculty && item.output_id == '04'
+                  item => item.output_id == '04' && (searchTerm ? (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.id.toLowerCase().includes(searchTerm.toLowerCase())) : item.section_id == selectedFaculty)
                 ).map((project, index) => (
                   <li
                     key={project.uuid}
@@ -599,8 +616,8 @@ const ProjectList = () => {
                   <svg className="w-24 h-24 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
-                  <p className="text-lg font-medium text-gray-500">ไม่มีโครงการในคณะนี้</p>
-                  <p className="mt-1 text-sm text-gray-400">กรุณาเลือกคณะอื่นเพื่อดูโครงการ</p>
+                  <p className="text-lg font-medium text-gray-500">{searchTerm ? 'ไม่พบโครงการที่ค้นหา' : 'ไม่มีโครงการในคณะนี้'}</p>
+                  <p className="mt-1 text-sm text-gray-400">{searchTerm ? 'ลองค้นหาด้วยคำอื่น' : 'กรุณาเลือกคณะอื่นเพื่อดูโครงการ'}</p>
                 </div>
               )}
             </div>
