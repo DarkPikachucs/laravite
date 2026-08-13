@@ -208,6 +208,11 @@
       </div>
 
       <div class="info-item">
+        <div class="info-label">แผนงานหลัก</div>
+        <div class="info-val">{{ $proposal->main_plan ?: 'ไม่ระบุข้อมูล' }}</div>
+      </div>
+
+      <div class="info-item">
         <div class="info-label">แผนงานย่อยของประเด็น</div>
         <div class="info-val">{{ $proposal->plan ?: 'ไม่ระบุข้อมูล' }}</div>
       </div>
