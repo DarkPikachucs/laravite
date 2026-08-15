@@ -215,14 +215,50 @@
     overflow-wrap: anywhere;
     }
 
+    /* Cells whose content is structured HTML (lists/divs), not free text:
+       use normal white-space so template indentation/newlines don't render
+       as phantom blank lines that make the row taller than the others. */
+    .brief-detail.is-block {
+    white-space: normal;
+    }
+
     .brief-sub {
-    padding-left: 22px;
     font-weight: 600;
     color: var(--ink);
     }
 
+    /* ข้อ 6: label ย่อยในคอลัมน์ "หัวข้อ" (ฝั่งซ้าย) ตามแบบ จ.1-1 */
+    .col-topic.brief-act-title {
+    padding-left: 30px;
+    font-weight: 700;
+    }
+
+    .col-topic.brief-act-label {
+    padding-left: 48px;
+    font-weight: 500;
+    }
+
+    /* บรรทัดย่อยของกิจกรรม: ชิดกัน ไม่มีเส้นคั่นภายในกลุ่มเดียวกัน */
+    .brief-table tr.act-line > td {
+    border-top: none;
+    border-bottom: none;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    }
+
+    /* หัวกลุ่ม (6.1 / 6.2 ...) มีเส้นคั่นด้านบนเพื่อแยกแต่ละกิจกรรม */
+    .brief-table tr.act-start > td {
+    border-top: 1px solid var(--line);
+    padding-top: 9px;
+    }
+
+    /* บรรทัดสุดท้ายของแต่ละกิจกรรม เว้นล่างเล็กน้อย */
+    .brief-table tr.act-end > td {
+    padding-bottom: 9px;
+    }
+
     .brief-kv {
-    margin: 2px 0 0 22px;
+    margin: 2px 0 0;
     color: var(--ink-soft);
     font-weight: 500;
     }
@@ -386,7 +422,7 @@
             </tr>
             <tr>
               <td class="col-topic"><span class="num">4.</span> ตัวชี้วัดและค่าเป้าหมาย</td>
-              <td class="brief-detail">
+              <td class="brief-detail is-block">
                 @if($selectedKpis->isNotEmpty())
                 <ul class="brief-list">
                   @foreach($selectedKpis as $k)
@@ -400,7 +436,7 @@
             </tr>
             <tr>
               <td class="col-topic"><span class="num">5.</span> พื้นที่เป้าหมาย</td>
-              <td class="brief-detail">
+              <td class="brief-detail is-block">
                 @if($areaProvince || $areaDistricts->isNotEmpty() || $areaSubdistricts->isNotEmpty())
                 @if($areaProvince)จังหวัด{{ $areaProvince }}@endif
                 @if($areaDistricts->isNotEmpty())<div style="margin-top:4px;">อำเภอ: {{ $areaDistricts->implode(', ') }}
@@ -413,25 +449,34 @@
             </tr>
             <tr>
               <td class="col-topic"><span class="num">6.</span> ขอบเขตของกิจกรรมหลักโดยสังเขป</td>
-              <td class="brief-detail">
-                @forelse($activities as $i => $act)
-                @php $co = collect($act['co_agencies'] ?? [])->pluck('name')->filter()->map(fn($x)=>trim($x)); @endphp
-                <div class="brief-sub" @if($i> 0) style="margin-top:12px;" @endif>
-                  6.{{ $i + 1 }} กิจกรรมที่ {{ $i + 1 }}: {{ $act['name'] ?? '—' }}
-                </div>
-                <div class="brief-kv">งบประมาณ: <b class="brief-money">{{ number_format((float) ($act['budget'] ?? 0),
-                    2) }}</b> บาท</div>
-                <div class="brief-kv">หน่วยงานผู้รับผิดชอบ: <b>{{ $val($act['responsible_agency'] ?? null) }}</b></div>
-                <div class="brief-kv">หน่วยงานที่เกี่ยวข้อง: <b>{{ $co->isNotEmpty() ? $co->implode(', ') : '—' }}</b>
-                </div>
-                @empty
+              <td class="brief-detail is-block">
+                @if(empty($activities))
                 <span class="brief-empty">—</span>
-                @endforelse
+                @endif
               </td>
             </tr>
+            @foreach($activities as $i => $act)
+            @php $co = collect($act['co_agencies'] ?? [])->pluck('name')->filter()->map(fn($x)=>trim($x)); @endphp
+            <tr class="act-line act-start">
+              <td class="col-topic brief-act-title">6.{{ $i + 1 }} กิจกรรมที่ {{ $i + 1 }}</td>
+              <td class="brief-detail is-block">{{ $val($act['name'] ?? null) }}</td>
+            </tr>
+            <tr class="act-line">
+              <td class="col-topic brief-act-label">งบประมาณ</td>
+              <td class="brief-detail is-block"><b class="brief-money">{{ number_format((float) ($act['budget'] ?? 0), 2) }}</b> บาท</td>
+            </tr>
+            <tr class="act-line">
+              <td class="col-topic brief-act-label">หน่วยงานผู้รับผิดชอบ</td>
+              <td class="brief-detail is-block">{{ $val($act['responsible_agency'] ?? null) }}</td>
+            </tr>
+            <tr class="act-line act-end">
+              <td class="col-topic brief-act-label">หน่วยงานที่เกี่ยวข้อง</td>
+              <td class="brief-detail is-block">{{ $co->isNotEmpty() ? $co->implode(', ') : '—' }}</td>
+            </tr>
+            @endforeach
             <tr>
               <td class="col-topic"><span class="num">7.</span> หน่วยงานดำเนินการ</td>
-              <td class="brief-detail">
+              <td class="brief-detail is-block">
                 <div>หน่วยงานผู้รับผิดชอบหลัก: {{ $val($proposal->operating_agency) }}</div>
                 @if($relatedAgencies->isNotEmpty())
                 <div style="margin-top:4px;">หน่วยงานที่เกี่ยวข้อง: {{ $relatedAgencies->implode(', ') }}</div>
