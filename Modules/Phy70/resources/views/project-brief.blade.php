@@ -216,8 +216,8 @@
     }
 
     /* Cells whose content is structured HTML (lists/divs), not free text:
-       use normal white-space so template indentation/newlines don't render
-       as phantom blank lines that make the row taller than the others. */
+    use normal white-space so template indentation/newlines don't render
+    as phantom blank lines that make the row taller than the others. */
     .brief-detail.is-block {
     white-space: normal;
     }
@@ -463,7 +463,8 @@
             </tr>
             <tr class="act-line">
               <td class="col-topic brief-act-label">งบประมาณ</td>
-              <td class="brief-detail is-block"><b class="brief-money">{{ number_format((float) ($act['budget'] ?? 0), 2) }}</b> บาท</td>
+              <td class="brief-detail is-block"><b class="brief-money">{{ number_format((float) ($act['budget'] ?? 0),
+                  2) }}</b> บาท</td>
             </tr>
             <tr class="act-line">
               <td class="col-topic brief-act-label">หน่วยงานผู้รับผิดชอบ</td>
@@ -513,4 +514,54 @@
         </div>
       </div>
     </div>
+
+    <script>
+      function exportToWord(elementId, filename = 'document') {
+          var element = document.getElementById(elementId);
+          if (!element) return;
+          
+          var styles = `
+              <style>
+                  @page { size: A4; margin: 2.54cm; }
+                  body { font-family: 'Sarabun', 'Cordia New', 'TH SarabunPSK', sans-serif; font-size: 11pt; color: #000; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                  th, td { border: 1px solid #000; padding: 8px; vertical-align: top; text-align: left; font-size: 11pt; }
+                  th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
+                  .brief-corner { text-align: right; font-weight: bold; }
+                  .brief-formno { text-align: right; font-weight: bold; margin-bottom: 20px; }
+                  .brief-heading { text-align: center; font-size: 12pt; font-weight: bold; margin-bottom: 20px; }
+                  .brief-line { margin-bottom: 10px; }
+                  .lbl { font-weight: bold; }
+                  .col-topic { font-weight: bold; width: 35%; }
+                  .num { font-weight: bold; }
+                  .brief-meta { margin-top: 20px; font-size: 10pt; color: #666; text-align: right; }
+                  ul { margin-top: 0; padding-left: 20px; }
+              </style>
+          `;
+
+          var html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>" +
+              "<head><meta charset='utf-8'><title>" + filename + "</title>" + styles + "</head><body>" + 
+              element.innerHTML + 
+              "</body></html>";
+
+          var blob = new Blob(['\ufeff', html], {
+              type: 'application/msword'
+          });
+          
+          var downloadLink = document.createElement("a");
+          document.body.appendChild(downloadLink);
+          
+          if(navigator.msSaveOrOpenBlob){
+              navigator.msSaveOrOpenBlob(blob, filename + '.doc');
+          } else {
+              var url = URL.createObjectURL(blob);
+              downloadLink.href = url;
+              downloadLink.download = filename + '.doc';
+              downloadLink.click();
+              URL.revokeObjectURL(url);
+          }
+          
+          document.body.removeChild(downloadLink);
+      }
+    </script>
 </x-phy70::layouts.master>
