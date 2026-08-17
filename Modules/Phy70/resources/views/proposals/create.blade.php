@@ -494,6 +494,11 @@ $orgList = \Modules\Phy70\Models\Phy70Organization::orderBy('name', 'asc')->pluc
             <input type="text" name="target_group" class="form-control" x-model="formData.target_group" required>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">ขอบเขตของกิจกรรมหลักโดยสังเขป</label>
+            <textarea name="main_activity" class="form-control" x-model="formData.main_activity"></textarea>
+          </div>
+
           <input type="hidden" name="operating_agency" x-model="formData.operating_agency">
           <input type="hidden" name="responsible_person" x-model="formData.responsible_person">
           <input type="hidden" name="position" x-model="formData.position">

@@ -55,6 +55,7 @@ Route::prefix('app/phy70')->group(function () {
     Route::get('/proposal/{id}/canvas', [Phy70Controller::class, 'showCanvas'])->name('phy70.proposal.canvas');
     Route::get('/proposal/{id}/edit', [Phy70Controller::class, 'editProposal'])->name('phy70.proposal.edit');
     Route::put('/proposal/{id}', [Phy70Controller::class, 'updateProposal'])->name('phy70.proposal.update');
+    Route::post('/proposal/{id}/retract', [Phy70Controller::class, 'retractProposal'])->name('phy70.proposal.retract');
     
     // Superadmin
     Route::get('/superadmin', [Phy70SuperadminController::class, 'index'])->name('phy70.superadmin.index');

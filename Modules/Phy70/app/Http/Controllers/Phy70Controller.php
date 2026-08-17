@@ -387,6 +387,28 @@ class Phy70Controller extends Controller
         return redirect('/app/phy70/proposal/' . $proposal->id)->with('success', $msg);
     }
 
+    public function retractProposal($id)
+    {
+        $user = $this->guard()->user();
+        if (!$user) {
+            return redirect('/app/phy70/login');
+        }
+
+        $proposal = Phy70Proposal::findOrFail($id);
+
+        if ($proposal->user_id !== $user->id && $user->role !== 'superadmin') {
+            return redirect('/app/phy70/proposal/' . $proposal->id)->with('error', 'คุณไม่มีสิทธิ์ดึงโครงการนี้กลับมาแก้ไข เนื่องจากคุณไม่ใช่เจ้าของโครงการหรือผู้ดูแลระบบ');
+        }
+
+        if ($proposal->status === 'draft') {
+            return redirect('/app/phy70/proposal/' . $proposal->id)->with('info', 'โครงการนี้เป็นแบบร่างอยู่แล้ว');
+        }
+
+        $proposal->update(['status' => 'draft']);
+
+        return redirect('/app/phy70/proposal/' . $proposal->id)->with('success', 'ดึงโครงการกลับมาแก้ไขเรียบร้อยแล้ว');
+    }
+
     public function manual()
     {
         return view('phy70::manual');

@@ -450,8 +450,10 @@
             <tr>
               <td class="col-topic"><span class="num">6.</span> ขอบเขตของกิจกรรมหลักโดยสังเขป</td>
               <td class="brief-detail is-block">
-                @if(empty($activities))
+                @if(empty($proposal->main_activity))
                 <span class="brief-empty">—</span>
+                @else
+                <div>{{ $proposal->main_activity }}</div>
                 @endif
               </td>
             </tr>

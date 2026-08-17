@@ -161,6 +161,17 @@
           style="background: rgba(99, 102, 241, 0.1); border-color: var(--primary); color: var(--primary); display: flex; align-items: center; gap: 6px;">
           ✏️ แก้ไขข้อเสนอ (ร่าง)
         </a>
+        @elseif(auth('phy70')->check() && (auth('phy70')->id() === $proposal->user_id || auth('phy70')->user()->role ===
+        'superadmin'))
+        <form action="{{ route('phy70.proposal.retract', $proposal->id) }}" method="POST"
+          style="display: inline-block; margin: 0;">
+          @csrf
+          <button type="submit" class="btn-secondary"
+            onclick="return confirm('คุณต้องการดึงข้อเสนอกลับมาแก้ไขใช่หรือไม่?');"
+            style="background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            🔄 ดึงกลับมาแก้ไข
+          </button>
+        </form>
         @endif
         <a href="/app/phy70" class="btn-secondary">← กลับสู่แดชบอร์ด</a>
       </div>
@@ -191,14 +202,15 @@
         <div class="info-label">แหล่งงบประมาณ</div>
         <div class="info-val">
           @php
-            $budgetSources = [
-                '1' => 'งบประมาณของจังหวัด',
-                '2' => 'งบประมาณของกระทรวง/กรม',
-                '3' => 'งบประมาณขององค์กรปกครองส่วนท้องถิ่น',
-                '4' => 'งบประมาณของภาคเอกชน/ชุมชน (ถ้ามี)',
-            ];
+          $budgetSources = [
+          '1' => 'งบประมาณของจังหวัด',
+          '2' => 'งบประมาณของกระทรวง/กรม',
+          '3' => 'งบประมาณขององค์กรปกครองส่วนท้องถิ่น',
+          '4' => 'งบประมาณของภาคเอกชน/ชุมชน (ถ้ามี)',
+          ];
           @endphp
-          {{ $proposal->budget_source ? ($budgetSources[$proposal->budget_source] ?? 'ไม่ระบุข้อมูล') : 'ไม่ระบุข้อมูล' }}
+          {{ $proposal->budget_source ? ($budgetSources[$proposal->budget_source] ?? 'ไม่ระบุข้อมูล') : 'ไม่ระบุข้อมูล'
+          }}
         </div>
       </div>
 
@@ -282,6 +294,11 @@
     <div class="info-item">
       <div class="info-label">กลุ่มเป้าหมาย</div>
       <div class="info-val">{{ $proposal->target_group ?: 'ไม่ระบุข้อมูล' }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="info-label">ขอบเขตของกิจกรรมหลักโดยสังเขป</div>
+      <div class="info-val">{{ $proposal->main_activity ?: 'ไม่ระบุข้อมูล' }}</div>
     </div>
 
     @if($proposal->kpis && is_array($proposal->kpis))
